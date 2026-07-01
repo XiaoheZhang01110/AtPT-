@@ -1,0 +1,63 @@
+\section{Literature Review}
+
+Existing studies on shared bus lane operations can be organized around three representative schemes: Intermittent Bus Lanes (IBL) \citep[e.g.,][]{viegas2001widening}, Bus Lanes with Intermittent Priority (BLIP) \citep[e.g.,][]{eichler2006bus}, and Dynamic Bus Lanes (DBL) \citep[e.g.,][]{xie2021design}. Their core difference lies in how vehicles ahead of an approaching bus are treated. IBL restricts new entries but generally allows vehicles already in the bus lane to continue; BLIP requires all vehicles within a fixed clearance zone to merge into the adjacent lane; DBL uses real-time traffic and vehicle states to identify and clear only those vehicles expected to impede the bus.
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{Shared_bus_only_lanes_v_3 3_XH/figs/main text figs/IBL.pdf}
+        \caption{IBL.}
+        \label{fig_IBL}
+    \end{subfigure}
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{Shared_bus_only_lanes_v_3 3_XH/figs/main text figs/BLIP.pdf}
+        \caption{BLIP.}
+        \label{fig_BLIP}
+    \end{subfigure}
+    \begin{subfigure}{0.32\textwidth}
+        \includegraphics[width=\linewidth]{Shared_bus_only_lanes_v_3 3_XH/figs/main text figs/DBL.pdf}
+        \caption{DBL.}
+        \label{fig_DBL}
+    \end{subfigure}
+    \caption{Operating mechanisms of IBL, BLIP, and DBL.}
+    \label{fig_operation_sbl_schemes}
+\end{figure}
+
+\subsection{Intermittent Bus Lanes (IBL)}
+
+Under IBL, the bus lane is open to private vehicles by default. Once an approaching bus is detected upstream through loop detectors, GPS, or automatic vehicle location, variable message signs (VMS) and longitudinal in-pavement lights prohibit new vehicles from entering the controlled segment, as shown in Figure~\ref{fig_IBL}. Vehicles already within the segment may continue and leave naturally, allowing the lane to clear gradually ahead of the bus. IBL therefore restores priority through entry restriction rather than forced clearance.
+
+\citet{viegas2001widening} introduced the IBL concept and formulated the signal-setting problem for a single road segment. \citet{viegas2004intermittent} subsequently extended the framework to multiple intersections, coordinating IBL signals across an area with interacting traffic flows.
+
+Field studies provided early evidence of practical feasibility. In a six-month demonstration in Lisbon, \citet{viegas2007intermittent} reported an approximately 20\% increase in average bus commercial speed under light-to-moderate demand, with negligible effects on general traffic. \citet{currie2008intermittent} examined a related application for trams in Melbourne and found positive, although more modest, travel-time improvements.
+
+Using a two-lane cellular automaton (CA) model, \citet{zhu2010numerical} compared IBL with a dedicated bus lane and ordinary mixed traffic. The results showed that IBL can balance bus priority and road utilization under moderate traffic density. However, because vehicles already occupying the lane are not required to leave when a bus approaches, they may remain as slow-moving obstructions and impose residual bus delay. \citet{2015Exploring} further quantified this limitation, finding a net bus-speed benefit only at traffic densities of approximately 25--74 veh/km; at higher densities, vehicles could not clear the lane before the bus arrived.
+
+Subsequent studies refined the operating conditions of IBL. \citet{lin2022capability} used kinematic wave theory to derive a closed-form capacity bound for the number of private vehicles that can use an IBL between consecutive buses without increasing bus delay, accounting for signal timing and near-side bus stops. \citet{xie2023modelling} jointly optimized vehicle admission and IBL activation relative to signal cycles and bus positions, while constraining bus travel time. \citet{zhao2023setting} incorporated coordinated pre-signal control and confirmed IBL feasibility under off-peak and moderate traffic conditions. \citet{yin2024optimization} proposed a spatially shared bus lane in which private vehicles enter only at designated locations according to the speed difference between the bus lane and adjacent lanes.
+
+These studies progressively incorporated signal control, bus-stop effects, and vehicle admission decisions. Nevertheless, lane changes were generally treated as instantaneous, and their execution time and delay effects on the receiving general-purpose lane were not explicitly represented. A unified analytical framework combining signal timing, bus dwell time, and lane-changing duration therefore remains unavailable.
+
+\subsection{Bus Lanes with Intermittent Priority (BLIP)}
+
+BLIP was proposed to address the residual bus interference under IBL \citep{eichler2006bus}. When a bus is detected, vehicles within a fixed clearance zone ahead of it are required to merge into the adjacent general-purpose lane through instructions delivered by VMS or connected-vehicle alerts, as shown in Figure~\ref{fig_BLIP}. Vehicles behind the bus may continue to use the lane after it passes. BLIP therefore restores bus priority through active clearance rather than entry restriction alone.
+
+\citet{eichler2006bus} used kinematic wave theory to show that BLIP does not substantially reduce street capacity under sub-saturated demand and derived operating formulae for the required clearance distance. In this formulation, however, the clearance distance is a static design parameter determined by road geometry and VMS placement.
+
+Simulation and field studies subsequently examined BLIP performance. Using a three-lane CA model with Vehicle-to-Vehicle (V2V) communication, \citet{wu2017evaluating} showed that clearance distance, bus headway, and road capacity jointly determine the feasible operating range. A VISSIM study by \citet{wu2018development} found that an optimized fixed clearance distance reduced bus travel time by approximately 14\% and improved schedule reliability by approximately 28\% relative to mixed traffic. \citet{chiabaut2019demonstration} further demonstrated BLIP on a 350-m corridor in Lyon, where its combination with transit signal priority reduced bus travel time and improved service regularity.
+
+A fixed clearance distance, however, cannot remain efficient under changing bus speeds and traffic conditions. An excessively long zone unnecessarily restricts private-vehicle access and wastes road capacity, whereas a zone that is too short may leave vehicles uncleared and delay the bus. \citet{wu2022two} confirmed that a fixed clearance distance may consequently over-protect or under-protect bus operations as bus speed changes.
+
+To relax this restriction, \citet{jiang2025analysis} proposed a spatio-temporal clearance distance (BLIP-ST) based on the real-time moving gap between consecutive buses. With Vehicle-to-Everything (V2X) communication, the clearance zone contracts or expands with bus speed, and CA simulations indicated improved performance under moderate-to-high Connected and Automated Vehicle (CAV) penetration. Nevertheless, the analysis remained simulation-based, omitted bus-stop dwell time, and did not explicitly account for lane-changing duration or the resulting delay on the receiving lane.
+
+\subsection{Dynamic Bus Lanes (DBL)}
+\label{sec_stream_2}
+
+DBL extends active clearance by adapting the protected space to the predicted interaction between an approaching bus and individual vehicles. In the V2X-based Virtual Right of Way (VROW) scheme proposed by \citet{xie2021design}, real-time information on bus and vehicle speeds, relative positions, signal timing, bus dwell time, route choice, and adjacent-lane gaps is used to determine whether a vehicle ahead is likely to impede the bus. Only vehicles expected to be caught by the bus or to queue in its path are requested to change lanes. Vehicles sufficiently far ahead, vehicles whose trajectories will not delay the bus, and vehicles that must remain for a turning movement may continue to use the lane. DBL therefore restores priority through selective, state-responsive clearance rather than clearing a predetermined zone, as shown in Figure~\ref{fig_DBL}.
+
+Early DBL studies established the basis for dynamic lane allocation. \citet{yang2009innovative} explicitly introduced a DBL system in which bus detection temporarily restricted access to the downstream curbside lane. \citet{joskowicz2012dynamic} examined a bus-triggered system that converted a normal approach lane into a bus lane through dynamic message signs and evaluated its feasibility in relation to queue length, intersection saturation, and available lane-changing distance. \citet{levin2018dynamic} subsequently formulated dynamic transit lanes for connected and automated vehicles using a cell transmission model, allowing lane accessibility and the capacity available to general traffic to vary over space and time. These studies established dynamic lane-use control but did not yet identify individual vehicles according to their predicted interference with bus operation.
+
+\citet{xie2021design} advanced this line of research by formulating VROW as a vehicle-level decision process. Each vehicle estimates whether the approaching bus will catch it before it clears the next signalized intersection, accounting for relative speed and distance, signal phase and timing, and its intended route. A lane-change request is issued only when the vehicle is predicted to obstruct the bus and a feasible maneuver is available; queued vehicles, turning vehicles, and vehicles without an acceptable adjacent-lane gap may remain. Microscopic simulations on an urban network and a highway segment showed that VROW improved bus performance with only marginal changes in private-vehicle travel time and lane-changing frequency. These benefits, however, relied on V2X availability and a high level of vehicle cooperation.
+
+Further simulation studies evaluated DBL under broader traffic and transit conditions. \citet{szarata2021simulation} compared DBL with mixed traffic and exclusive bus lanes and showed that dynamic operation can retain bus-priority benefits while reducing the adverse effects of permanent lane reservation. \citet{othman2023dynamic} found DBL to be most promising under intermediate traffic demand, whereas \citet{olstam2025traffic} reported lower bus travel-time variability but a possible increase in total travel time across all users. More recent connected-vehicle research has refined the spatial activation rule, including moving-block DBL whose protected length changes with bus speed \citep{Luo2023}.
+
+Despite these advances, the physical execution of requested lane changes remains insufficiently represented in analytical DBL models. Microscopic simulation can reproduce lane-changing behavior, but it does not provide a closed-form feasibility condition linking the time required to complete a merge, the delay imposed on the receiving general-purpose lane, and the resulting benefit of dynamic bus priority. Existing studies therefore offer limited analytical guidance on when selective clearance remains beneficial after its lane-changing costs are included.

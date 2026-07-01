@@ -1,0 +1,44 @@
+% Suggested restructuring for Section 2: Literature Review.
+% Scope: shorter opening, three mechanism-based subsections, and a summary table
+% leading to the research gap. The Overleaf project has not been edited.
+
+\section{Literature Review}
+
+Existing studies on shared bus-only lane (SBL) operations can be organized around three representative schemes: Intermittent Bus Lanes (IBL), Bus Lanes with Intermittent Priority (BLIP), and Dynamic Bus Lanes (DBL). Their core difference lies in how vehicles ahead of an approaching bus are treated. IBL restricts new entries but generally allows vehicles already in the bus lane to continue; BLIP requires all vehicles within a fixed clearance zone to merge into the adjacent lane; DBL uses real-time traffic and vehicle states to identify and clear only those vehicles expected to impede the bus.
+
+\subsection{Intermittent Bus Lanes}
+
+IBL keeps the physical bus lane unchanged and temporarily opens it to private vehicles during the gaps between buses. Once an approaching bus is detected, new private vehicles are prevented from entering the controlled segment, while vehicles already in the lane are generally allowed to continue and leave the segment naturally. The operating logic is therefore based on admission control rather than forced evacuation.
+
+Early IBL studies established the feasibility of this concept using analytical models, signal coordination, field demonstrations, and microscopic simulations \citep[e.g.,][]{viegas2001widening,viegas2007intermittent,currie2008intermittent,zhu2010numerical}. Later work further examined the capacity of IBL under signalized intersections, near-side bus stops, and coordinated pre-signal control \citep[e.g.,][]{lin2022capability,xie2023modelling,zhao2023setting}. These studies show that IBL can improve bus performance and lane utilization under light-to-moderate traffic demand, but its performance depends critically on whether private vehicles already occupying the bus lane can clear before they delay the approaching bus.
+
+\subsection{Bus Lanes with Intermittent Priority}
+
+BLIP was proposed to reduce the residual bus interference that may remain under IBL. Instead of only blocking new entries, BLIP defines a fixed clearance zone in front of the approaching bus and requires private vehicles within that zone to merge back into the adjacent general-purpose lane. Its central operational variable is therefore the clearance distance.
+
+Representative BLIP studies have examined the design of clearance distance, its relationship with bus headway and road capacity, and the use of VMS, V2V, or V2X communication to implement the clearance rule \citep[e.g.,][]{eichler2006bus}. Because the clearance distance is predetermined, however, BLIP cannot readily adapt the protected space to real-time traffic conditions. An excessively long zone unnecessarily restricts private-vehicle access and wastes road capacity, whereas a zone that is too short may leave vehicles uncleared and delay the approaching bus. Moreover, most BLIP models treat lane changing as instantaneous or leave it implicit in simulation, thereby overlooking the clearance-induced delay imposed on the adjacent general-purpose lane. This fixed-zone limitation motivates a more adaptive form of lane control.
+
+\subsection{Dynamic Bus Lanes}
+
+The term DBL has been used for several operating rules, some of which differ little from IBL because they merely switch lane access when a bus is detected. A more distinctive DBL mechanism is the V2X-based Virtual Right of Way (VROW) proposed by Xie et al. \citep{xie2021design}. Instead of clearing a fixed-length zone, VROW determines whether each vehicle ahead is likely to delay the approaching bus using real-time information on bus and vehicle speeds, relative positions, signal timing, bus dwell time, route choice, and available gaps in the adjacent lane.
+
+Under this mechanism, only vehicles predicted to be caught by or queue in front of the bus are requested to change lanes. Vehicles sufficiently far ahead, vehicles whose trajectories will not impede the bus, and vehicles that must remain for a turning movement are not cleared. The resulting clearance distance therefore changes with the prevailing operating state rather than being prescribed in advance. Microscopic simulations indicate that this selective control can improve bus operations with limited effects on private-vehicle travel time and lane-changing frequency. However, the method assumes V2X availability and a high degree of vehicle cooperation, while the feasibility and delay consequences of the requested merges remain insufficiently represented in an analytical framework.
+
+\subsection{Summary and Research Gaps}
+
+\begin{table}[htbp]
+\centering
+\caption{Core differences among IBL, BLIP, and DBL studies}
+\label{tab_sbl_literature_summary}
+\begin{tabular}{p{0.13\textwidth}p{0.22\textwidth}p{0.25\textwidth}p{0.26\textwidth}}
+\hline
+Scheme & Controlled space & Priority mechanism & Unresolved issue \\
+\hline
+IBL & Existing bus lane & Entry restriction & Residual lane occupancy \\
+BLIP & Fixed bus-ahead clearance zone & Active clearance & Fixed-zone mismatch; clearance delay omitted \\
+DBL & Predicted bus--vehicle interaction zone & Selective, state-responsive clearance & Lane-change completion and adjacent-lane delay \\
+\hline
+\end{tabular}
+\end{table}
+
+Table~\ref{tab_sbl_literature_summary} shows that IBL, BLIP, and DBL differ mainly in their priority-restoration mechanisms, but they share a common unresolved modeling issue. Existing studies have improved the understanding of admission control, clearance-zone design, and dynamic lane conversion, yet most of them do not explicitly account for the finite duration of mandatory lane-changing maneuvers or the delay imposed on the adjacent general-purpose lane when private vehicles must leave the bus-priority space. Moreover, traffic signals, bus-stop dwell time, and mandatory lane-changing delay have usually been treated separately rather than integrated into a unified analytical feasibility framework. This study addresses this gap by deriving closed-form conditions for SBL operation that jointly incorporate signal spacing, bus-stop dwell dynamics, and lane-changing-induced traffic delay.

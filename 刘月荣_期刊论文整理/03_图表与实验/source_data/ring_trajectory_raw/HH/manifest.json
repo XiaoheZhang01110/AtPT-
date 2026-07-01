@@ -1,0 +1,92 @@
+{
+  "strategy": "HH",
+  "project": "base_mappo",
+  "control_type": 4,
+  "model": null,
+  "seed": 1,
+  "simulation_end_time_s": 28800,
+  "station_count": 12,
+  "bus_count": 6,
+  "arrival_rates_per_second": [
+    0.008333333333333333,
+    0.008333333333333333,
+    0.01388888888888889,
+    0.016666666666666666,
+    0.016666666666666666,
+    0.05,
+    0.06666666666666667,
+    0.03333333333333333,
+    0.016666666666666666,
+    0.011111111111111112,
+    0.009259259259259259,
+    0.008333333333333333
+  ],
+  "buses": [
+    {
+      "bus_id": 0,
+      "dispatch_time": 0,
+      "records": 28802,
+      "time_start": 0,
+      "time_end": 28801,
+      "completed_circuits": 11,
+      "stopped_steps": 4661,
+      "invalid_backward_steps": 0,
+      "file": "bus_0.csv"
+    },
+    {
+      "bus_id": 1,
+      "dispatch_time": 360,
+      "records": 28442,
+      "time_start": 360,
+      "time_end": 28801,
+      "completed_circuits": 11,
+      "stopped_steps": 4598,
+      "invalid_backward_steps": 0,
+      "file": "bus_1.csv"
+    },
+    {
+      "bus_id": 2,
+      "dispatch_time": 720,
+      "records": 28082,
+      "time_start": 720,
+      "time_end": 28801,
+      "completed_circuits": 10,
+      "stopped_steps": 4553,
+      "invalid_backward_steps": 0,
+      "file": "bus_2.csv"
+    },
+    {
+      "bus_id": 3,
+      "dispatch_time": 1080,
+      "records": 27722,
+      "time_start": 1080,
+      "time_end": 28801,
+      "completed_circuits": 10,
+      "stopped_steps": 4502,
+      "invalid_backward_steps": 0,
+      "file": "bus_3.csv"
+    },
+    {
+      "bus_id": 4,
+      "dispatch_time": 1440,
+      "records": 27362,
+      "time_start": 1440,
+      "time_end": 28801,
+      "completed_circuits": 10,
+      "stopped_steps": 4463,
+      "invalid_backward_steps": 0,
+      "file": "bus_4.csv"
+    },
+    {
+      "bus_id": 5,
+      "dispatch_time": 1800,
+      "records": 27002,
+      "time_start": 1800,
+      "time_end": 28801,
+      "completed_circuits": 10,
+      "stopped_steps": 4302,
+      "invalid_backward_steps": 0,
+      "file": "bus_5.csv"
+    }
+  ]
+}

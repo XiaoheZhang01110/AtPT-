@@ -1,0 +1,215 @@
+\subsection{环形线路算例}
+
+\subsubsection{算例场景与参数设置}
+
+为验证所提方法在客流空间分布不均和车辆运行随机扰动条件下的控制效果，首先构建理想单向环形公交线路算例。线路设置12个公交站点，站点编号依次为$s_1,s_2,\ldots,s_{12}$，相邻站点间距均为1~km。线路上配置6辆性能相同的公交车，车辆按同一方向循环运行，站间平均运行速度设为20~km/h，初始计划车头时距为360~s。算例场景及各站点乘客到达率如图~\ref{fig:ring_case}所示。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig_ring_scenario.pdf}
+        \caption{环形公交线路算例场景.}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig_ring_arrival_rate.pdf}
+        \caption{各站点乘客到达率.}
+    \end{subfigure}
+    \caption{环形线路算例场景与乘客到达率.}
+    \label{fig:ring_case}
+\end{figure}
+
+各站点乘客到达服从泊松过程，不同站点采用不同的到达率，以模拟沿线客流需求的空间非均匀性。乘客到站后按先到先服务原则排队候车，其下车站点从车辆运行方向上的下游站点中随机选取。每位乘客的上车时间和下车时间分别设为3~s和1.8~s。车辆在站点完成正常上下客后，根据控制策略决定是否追加驻站时间。单次最大驻站时间设为180~s；当策略给出的追加驻站时间小于30~s时，不实施额外驻站控制，以避免频繁的小幅干预。
+
+每次仿真持续3~h，其中前25~min为预热阶段。预热阶段用于形成稳定的乘客积累和车辆运行状态，其结果不纳入评价指标统计。改进MAPPO模型训练300回合。训练结束后，采用收敛策略开展独立仿真测试，并从车辆运行轨迹、车辆载客量以及乘客和车辆层面的评价指标三个方面分析控制效果。
+
+\subsubsection{模型训练与收敛性分析}
+
+改进MAPPO模型的主要超参数见表~\ref{tab:ring_mappo_hyperparameters}。Actor和Critic网络均采用Adam优化器，学习率设为$1\times10^{-4}$。折扣因子$\gamma$设为0.9，广义优势估计参数$\lambda$设为0.95，PPO裁剪参数$\epsilon_{\mathrm{clip}}$设为0.2。事件图注意力模块采用2个注意力头，以综合提取前后车辆异步到站事件中的关联信息。
+
+\begin{table}[!ht]
+    \centering
+    \caption{环形线路算例中改进MAPPO算法超参数取值}
+    \label{tab:ring_mappo_hyperparameters}
+    \begin{tabular}{>{\centering\arraybackslash}m{2.0cm}
+                    >{\centering\arraybackslash}m{4.0cm}
+                    >{\centering\arraybackslash}m{2.0cm}
+                    >{\centering\arraybackslash}m{2.0cm}}
+        \toprule
+        参数类别 & 参数名称 & 符号 & 取值 \\
+        \midrule
+        \multirow{3}{*}{优化器}
+        & 策略网络学习率 & $\alpha_{\mathrm{Actor}}$ & $1\times10^{-4}$ \\
+        & 价值网络学习率 & $\alpha_{\mathrm{Critic}}$ & $1\times10^{-4}$ \\
+        & Adam参数 & $\epsilon$ & $1\times10^{-5}$ \\
+        \midrule
+        \multirow{2}{*}{梯度控制}
+        & Actor梯度裁剪阈值 & $c_{\mathrm{Actor}}$ & 5 \\
+        & Critic梯度裁剪阈值 & $c_{\mathrm{Critic}}$ & 5 \\
+        \midrule
+        \multirow{5}{*}{强化学习}
+        & 折扣因子 & $\gamma$ & 0.9 \\
+        & GAE参数 & $\lambda$ & 0.95 \\
+        & 裁剪参数 & $\epsilon_{\mathrm{clip}}$ & 0.2 \\
+        & 小批量大小 & $B$ & 64 \\
+        & 每个小批量的更新次数 & $k$ & 3 \\
+        \midrule
+        网络结构 & 注意力头数 & $K$ & 2 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+图~\ref{fig:ring_training}给出了改进MAPPO在环形线路算例中的训练过程。图中的浅色细线表示每个训练回合记录的原始值，能够反映训练过程中由随机客流、车辆运行扰动和策略探索引起的短期波动；深色粗线表示平滑后的变化趋势，用于观察模型整体的学习和收敛状态。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig_mappo_cumulative_reward.pdf}
+        \caption{累计奖励.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig_mappo_actor_loss.pdf}
+        \caption{Actor损失.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig_mappo_critic_mse.pdf}
+        \caption{Critic均方误差.}
+    \end{subfigure}
+    \caption{环形线路算例中改进MAPPO的训练过程.}
+    \label{fig:ring_training}
+\end{figure}
+
+由图~\ref{fig:ring_training}(a)可见，训练初期累计奖励较低，且回合间波动明显。这一阶段的策略仍处于探索状态，驻站动作尚不能稳定协调相邻车辆。随着训练推进，累计奖励总体上升，表明智能体逐步学会利用车头时距、车内乘客数和异步到站事件信息制定驻站决策。训练后期，平滑奖励曲线趋于稳定，虽然原始奖励仍受随机仿真环境影响而存在波动，但没有出现持续下降或明显发散，说明策略已形成较稳定的控制能力。
+
+图~\ref{fig:ring_training}(b)展示了Actor损失的变化。训练初期，策略网络更新幅度较大，损失值波动较为明显；随后曲线逐渐进入较稳定的波动区间。这是PPO类算法的正常现象。Actor损失并不要求单调下降，其数值同时受到优势函数估计、策略裁剪和样本分布变化的影响。训练后期损失未出现持续增大，说明策略更新受到裁剪机制约束，没有发生明显的参数发散。
+
+图~\ref{fig:ring_training}(c)给出了Critic网络预测回报与目标回报之间的均方误差。训练初期，Critic对状态价值的估计尚不准确，因此误差较大且波动明显。随着经验样本积累，误差整体下降并逐步稳定，表明价值网络能够较好地拟合当前策略下的长期回报。综合累计奖励、Actor损失和Critic均方误差可以判断，改进MAPPO在300个训练回合内完成了有效学习，训练过程总体稳定，所得策略可用于后续对比仿真。
+
+\subsubsection{仿真结果分析}
+
+为比较不同控制逻辑的作用，设置无控制策略（NH）以及6种驻站控制策略：基于固定车头时距的控制策略（HH）、基于时刻表的控制策略（SH）、基于前向车头时距的控制策略（FH）、基于后向车头时距的控制策略（BH）、原始MAPPO策略和本文提出的改进MAPPO策略。NH作为基准情形，不对车辆施加额外驻站控制。
+
+图~\ref{fig:ring_nh}给出了NH情形下的车辆运行轨迹和载客量。车辆运行初期仍能保持相对均匀的间隔，但随机运行时间和站点客流扰动会使车头时距逐渐偏离初始值。前车延误后需要服务更多乘客，驻站时间进一步增加；后车则因乘客被前车接走而逐渐追近，最终形成串车。与此对应，不同车辆的载客量差异逐步扩大，表现为前车高载、后车低载的运力利用失衡。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_NH.pdf}
+        \caption{车辆运行轨迹.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig6_load_NH.pdf}
+        \caption{公交载客量.}
+    \end{subfigure}
+    \caption{无控制情形下的车辆运行轨迹与公交载客量.}
+    \label{fig:ring_nh}
+\end{figure}
+
+图~\ref{fig_trajectory_ring}展示了6种控制策略下的车辆运行状态。HH和SH均能通过驻站干预抑制车辆间隔的快速收缩，但其控制规则依赖预设目标或时刻表，难以及时响应客流与运行状态的连续变化，轨迹间距仍存在一定波动。FH和BH根据前向或后向车头时距实施反馈控制，车辆轨迹较规则控制更为均匀，说明局部动态信息有助于阻断扰动传播；但单侧车头时距不能完整描述车辆前后关系，局部调整仍可能把偏差传递给相邻车辆。
+
+两种强化学习策略下的轨迹整体更为平行，车辆间隔随运行时间的变化更平缓。原始MAPPO能够利用状态信息和长期奖励协调驻站决策，避免仅针对当前车头时距进行短视修正。改进MAPPO进一步将前后车辆的异步到站事件纳入决策，并通过注意力机制筛选与当前车辆关系更密切的事件。因此，其轨迹分布保持得更均匀，表明事件图信息有助于提升多车协同控制的连续性。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_HH.pdf}
+        \caption{基于固定车头时距的控制策略.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_SH.pdf}
+        \caption{基于时刻表的控制策略.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_FH.pdf}
+        \caption{基于前向车头时距的控制策略.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_BH.pdf}
+        \caption{基于后向车头时距的控制策略.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_MAPPO.pdf}
+        \caption{基于MAPPO算法的控制策略.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_trajectory_改进MAPPO.pdf}
+        \caption{基于改进MAPPO算法的控制策略.}
+    \end{subfigure}
+    \caption{不同控制策略下的公交车辆运行轨迹.}
+    \label{fig_trajectory_ring}
+\end{figure}
+
+图~\ref{fig_load_ring}进一步给出了不同策略下6辆车在各站点的累计载客量。各策略的载客量均随站点客流强度变化，在客流需求较高的站点附近明显上升，说明模型能够反映空间非均匀需求。不同策略的主要差异在于同一站点车辆曲线的离散程度。HH和SH下车辆间载客量差异仍较明显，与其轨迹中残留的车头时距波动一致；FH和BH通过局部反馈改善了载客均衡性，但不同车辆曲线尚未完全收敛。
+
+MAPPO和改进MAPPO下各车辆载客量曲线更为集中，说明强化学习策略在抑制串车的同时改善了运力分配。与原始MAPPO相比，改进MAPPO下车辆间载客量变化更一致，尤其在客流快速增长的站点区段未出现个别车辆载客量持续偏离的现象。这表明异步事件图不仅改善了车辆间隔，也使乘客在相邻车辆间的分配更加均衡。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_HH.pdf}
+        \caption{基于固定车头时距的公交载客量.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_SH.pdf}
+        \caption{基于时刻表的公交载客量.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_FH.pdf}
+        \caption{基于前向车头时距的公交载客量.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_BH.pdf}
+        \caption{基于后向车头时距的公交载客量.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_MAPPO.pdf}
+        \caption{基于MAPPO算法的公交载客量.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig6_load_改进MAPPO.pdf}
+        \caption{基于改进MAPPO算法的公交载客量.}
+    \end{subfigure}
+    \caption{不同控制策略下的公交载客量.}
+    \label{fig_load_ring}
+\end{figure}
+
+上述轨迹与载客量结果说明，车头时距稳定性改善能够进一步传导至乘客服务水平和运力利用效率。图~\ref{fig:ring_metrics}给出了7种策略在各站点的AWT、AHT、ATT和AOD。四项指标呈现出一致的空间特征：在客流压力较大的中间站点附近，各策略之间的差异明显扩大，说明高需求站点是控制策略能否抑制扰动累积的关键区段。
+
+\begin{figure}[!ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig_ring_awt_by_stop.pdf}
+        \caption{AWT.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig_ring_aht_by_stop.pdf}
+        \caption{AHT.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig_ring_att_by_stop.pdf}
+        \caption{ATT.}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \includegraphics[width=\linewidth]{figure/fig_ring_aod_by_stop.pdf}
+        \caption{AOD.}
+    \end{subfigure}
+    \caption{不同策略下的评价指标对比图.}
+    \label{fig:ring_metrics}
+\end{figure}
+
+就AWT而言，SH在$s_7$和$s_8$处出现明显峰值，FH、BH和HH也表现出不同程度的等待时间上升，表明依赖固定目标或单侧车头时距的控制难以及时适应局部客流突增。相比之下，两种强化学习策略的AWT曲线整体较低。其中，改进MAPPO在12个站点的AWT均低于原始MAPPO，并将$s_8$处的等待时间峰值由约679~s降至500~s。该结果与前文较均匀的车辆轨迹相吻合：车辆间隔得到维持后，乘客长时间等不到车辆的概率随之降低。
+
+AHT反映控制策略为稳定车辆间隔所付出的驻站代价。除不实施控制的NH外，SH、FH和BH的AHT整体较高且站点间波动明显；改进MAPPO则在12个站点的AHT均低于原始MAPPO。尤其在驻站需求较集中的$s_6$附近，改进MAPPO的AHT约为62~s，低于原始MAPPO的约69~s。这说明所提方法能够在较少驻站干预下维持车距稳定，与其利用异步事件信息进行协同决策的设计目标一致。
+
+ATT同时受到站外等待、车辆运行和驻站控制的影响，因此能够检验等待时间改善是否以增加乘客总出行时间为代价。结果显示，SH、HH、FH和BH在部分站点的ATT明显偏高，表明较强或不适时的驻站干预会抵消车距控制收益。改进MAPPO在12个站点中的11个站点取得低于原始MAPPO的ATT，并将$s_8$处的峰值由约1817~s降至1649~s。由此可见，其AWT下降并未被额外驻站成本完全抵消，乘客总体出行效率得到改善。
+
+AOD结果进一步验证了前述载客量分析。NH和SH在多数站点的载客量离散度较高，说明车辆聚集会形成“前车拥挤、后车低载”的运力错配。随着车辆沿线路运行，各控制策略的AOD总体下降；改进MAPPO在11个站点低于原始MAPPO，且两者差异在高离散区段更为明显。这与改进MAPPO下各车载客量曲线更集中相一致，说明事件图注意力机制不仅稳定了车辆间隔，也改善了乘客在相邻车辆之间的分配。
+
+综合来看，车辆轨迹、载客量和四项评价指标形成了相互印证的证据链：较均匀的车头时距降低了乘客等待时间，较有针对性的驻站决策减少了无效控制，由此避免总出行时间上升，并进一步改善车辆载客均衡性。需要指出的是，$s_7$和$s_8$附近仍是各策略的性能压力区，说明在客流集中条件下仍存在进一步优化空间。总体而言，改进MAPPO在环形线路算例中表现出更好的多目标协调能力，其优势并非来自对单一指标的局部优化。

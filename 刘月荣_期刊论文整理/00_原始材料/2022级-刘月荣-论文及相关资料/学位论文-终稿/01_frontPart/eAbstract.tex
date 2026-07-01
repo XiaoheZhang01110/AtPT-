@@ -1,0 +1,78 @@
+%-------------------------------------------------------%
+%                         英文摘要
+%-------------------------------------------------------%
+\chapter*{\textbf{ABSTRACT}}
+\eabstractpagestyle % 中文摘要的页眉页脚
+Under the rapid development of big data, deep learning, artificial intelligence, 
+and intelligent network technologies, this study proposes a dynamic holding control 
+strategy based on deep reinforcement learning to address common operational efficiency 
+issues in urban bus systems such as bus bunching and unstable headway. Aiming at the
+shortcomings of traditional holding control methods in real-time response and dynamic 
+environment adaptation, we innovatively construct a multi-agent collaborative optimization 
+framework that integrates intelligent connected vehicle data with reinforcement learning algorithms 
+to achieve real-time dynamic holding control for bus operations.
+
+By analyzing the actual operating environment of buses, we abstract and model core elements within it. 
+Simultaneously, we conduct comprehensive elaboration and detailed analysis of reinforcement learning 
+algorithms, and the algorithm framework Actor-Critic suitable for this research problem is selected. 
+We adopt the Multi-Agent Proximal Policy Optimization (MAPPO) as the base algorithm. 
+Based on this, we build a bus fleet operation model and meticulously design a bus operation simulation 
+experimental process. Through investigating the causes of headway instability in bus operations, 
+we propose a holding control strategy aimed at stabilizing headway.
+
+This paper models bus holding control as a partially observable Markov game.
+By designing an Event Graph Network (EGN) to describe the asynchronous timing characteristics 
+of vehicle arrivals, the Graph Attention Network (GAT) is used to learn the event graph 
+structure information and quantify the influence intensity of spatio-temporal interaction 
+between vehicles, to supplement the limitation of the Markov game that the influence of 
+other agents' actions cannot be considered due to the local observation independence constraint.
+Building upon this framework, we propose an enhanced Multi-Agent Proximal Policy Optimization (MAPPO) 
+algorithm by integrating a graph attention network (GAT) into the original architecture, 
+thereby establishing a dynamic holding control model with environmental awareness and collaborative 
+decision-making capabilities.
+In this model, each bus is regarded as an agent, and the multi-dimensional state space 
+(including vehicle operational stability metrics and passenger demand characteristics)
+and continuous action space (holding duration decisions) are designed, and a composite reward function is 
+constructed that integrates the headway stability and the minimization of passenger waiting time.
+
+To validate the proposed model's performance, a one-way bus circular bus route was designed and implemented. 
+Comparative experiments were conducted against baseline models using predefined evaluation metrics, 
+demonstrating the superiority of the proposed approach. To further verify its practical feasibility, 
+the model was extended to a real-world conventional bus line scenario incorporating additional operational complexities. 
+Using the Chengdu T34 bus route as a validation platform, the model was compared with rule-based control, 
+mathematical optimization control, and the original MAPPO algorithm across both micro and macro perspectives.
+The numerical results indicate that the bus holding control model proposed in this paper, 
+based on the improved MAPPO algorithm, shows performance improvements over the No-holding control (NH), 
+the naive hard-holding control (HH), the forward headway-based holding control (FH), 
+the backward headway-based holding control (BH), and the control model based on the original MAPPO algorithm, 
+with respect to the average waiting time (AWT) being improved by 34.95\%, 27.97\%, 12.56\%, 20.00\%, and 7.84\%, 
+respectively. For the average travel time (ATT) metric, the improvements are 4.3\%, 21.25\%, 16.63\%, 8.99\%, and 2.94\%, 
+respectively. The average occupancy dispersion (AOD) is reduced by 
+77.14\%, 5.88\%, 11.11\%, 20.00\%, and 11.11\%, respectively (lower values indicate better load balancing).
+Regarding the average holding time (AHT), the performance compared to 
+the naive hard-holding control (HH), the forward headway-based holding control (FH), 
+the backward headway-based holding control(BH), and the control model based on the original MAPPO algorithm 
+increased by 74.51\%, 69.05\%, 45.83\%, and 27.78\%, respectively. 
+The results suggest that the proposed model performs well in maintaining the stability of bus headways, 
+reducing bus bunching, lowering the cost of passenger travel time, improving the utilization of 
+public transport resources, and enhancing the quality of public transport services.
+
+
+
+% Numerical results revealed that the improved MAPPO-based bus holding control model achieved significant improvements 
+% compared to No-holding control (NH), Naive hard-holding control (HH), Forward headway-based holding control (FH), 
+% Backward headway-based holding control(BH), and original MAPPO-based holding control:
+% \begin{itemize}
+%     \item Average Waiting Time (AWT): 34.95\%, 27.97\%, 12.56\%, 20.00\%, and 7.84\% reduction respectively
+%     \item Average Travel Time (ATT): 4.3\%, 21.25\%, 16.63\%, 8.99\%, and 2.94\% reduction respectively
+%     \item Average Occupancy Dispersion (AOD): 77.14\%, 5.88\%, 11.11\% 20.00\%, and 11.11\% improvement respectively
+%     \item Average Holding Time (AHT): 74.51\%, 69.05\%, 45.83\%, and 27.78\% reduction respectively
+% \end{itemize}
+% These findings demonstrate that the proposed model effectively maintains headway stability, 
+% mitigates bus bunching incidents, reduces passenger travel time costs, optimizes resource utilization, 
+% and enhances overall service quality in public transit systems.
+
+
+\vspace{1em}
+
+\noindent \hangindent=4.9em \textbf{Keywords: }Reinforcement learning, Bus bunching, Agent, Holding control, Asynchronous characteristics

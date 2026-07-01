@@ -1,0 +1,47 @@
+# macOS and editor metadata
+.DS_Store
+.idea/
+.vscode/
+*~
+*.swp
+
+# Python environments and caches
+.venv/
+.venv-*/
+.figure-venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# LaTeX intermediate files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex
+*.synctex.gz
+*.synctex.gz.sum.synctex
+*.toc
+*.vrb
+*.xdv
+
+# Bundled copies and local archives
+*.zip
+
+# Oversized local reference books and raw trajectory exports
+深度强化学习(中文版-彩印).pdf
+EasyRL_v.1.0.4.pdf
+A_0_1mappo_2_21trajectory.csv
+A_0_1amappo_2_21trajectory.csv

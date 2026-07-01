@@ -1,0 +1,262 @@
+%-------------------------------------------------------%
+%                          附录A
+%-------------------------------------------------------%
+\chapter*{附录A\quad 部分强化学习伪代码}\label{附录A}	
+
+
+\addcontentsline{toc}{chapter}{附录B~~~~常见一级学科中英文名称对照表}
+\setcounter{equation}{0}
+\setcounter{figure}{0}
+\setcounter{table}{0} 
+\renewcommand{\theequation}{A-\arabic{equation}}
+\renewcommand{\thefigure}{A-\arabic{figure}}
+\renewcommand{\thetable}{A-\arabic{table}}
+\begin{table}[htbp]
+\centering
+\caption{Q-learning算法伪代码}
+% \label{tab:A-1}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textnormal{步骤} & \textnormal{操作} \\
+\midrule
+1 & 初始化Q表 $Q(s,a)$，可设为全零或随机值 \\
+2 & 设置超参数：学习率 $\alpha$，折扣因子 $\gamma$，探索率 $\epsilon$ \\
+3 & \textbf{for} episode = 1 \textbf{to} $N$ \textbf{do} \\
+4 & \quad 初始化状态 $s$ \\
+5 & \quad \textbf{repeat} \\
+6 & \quad\quad 根据$\epsilon$-greedy策略选择动作 $a$： \\
+7 & \quad\quad \quad 以概率$\epsilon$随机选择动作 \\
+8 & \quad\quad \quad 否则选择$a = \arg\max_{a'} Q(s, a')$ \\
+9 & \quad\quad 执行动作$a$，观测奖励$r$和下一状态$s'$ \\
+10 & \quad\quad 更新Q值： \\
+11 & \quad\quad $Q(s,a) \leftarrow Q(s,a) + \alpha\left[r + \gamma \max_{a'} Q(s',a') - Q(s,a)\right]$ \\
+12 & \quad\quad 更新状态：$s \leftarrow s'$ \\
+13 & \quad \textbf{until} 达到终止状态 \\
+14 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\caption{DQN算法伪代码}
+\label{tab:dqn}
+\begin{tabular}{{lp{0.8\textwidth}}}
+\toprule
+\textnormal{步骤} & \textnormal{操作} \\
+\midrule
+1 & 初始化在线网络参数 $\theta$ 和目标网络参数 $\theta^- \leftarrow \theta$ \\
+2 & 创建经验回放缓冲区 $\mathcal{D}$（容量$N$） \\
+3 & 设置超参数：学习率 $\alpha$，折扣因子 $\gamma$，探索率 $\epsilon$，目标网络更新频率 $C$ \\
+4 & \textbf{for} episode = 1 \textbf{to} $M$ \textbf{do} \\
+5 & \quad 初始化状态 $s_0$ \\
+6 & \quad \textbf{for} $t = 0$ \textbf{to} $T-1$ \textbf{do} \\
+7 & \quad\quad 以概率$\epsilon$随机选择动作$a_t$，否则选择$a_t = \arg\max_a Q(s_t, a; \theta)$ \\
+8 & \quad\quad 执行$a_t$，观测奖励$r_t$和下一状态$s_{t+1}$ \\
+9 & \quad\quad 存储转移$(s_t, a_t, r_t, s_{t+1})$到$\mathcal{D}$ \\
+10 & \quad\quad 从$\mathcal{D}$中随机采样小批量转移$(s_j, a_j, r_j, s_{j+1})$ \\
+11 & \quad\quad 计算目标Q值：$y_j = \begin{cases} 
+r_j & \text{if } s_{j+1}\text{终止} \\
+r_j + \gamma \max_{a'} Q(s_{j+1},a';\theta^-) & \text{otherwise}
+\end{cases}$ \\
+12 & \quad\quad 计算损失：$L(\theta) = \frac{1}{m}\sum_j (y_j - Q(s_j,a_j;\theta))^2$ \\
+13 & \quad\quad 用梯度下降法更新在线网络参数$\theta$ \\
+14 & \quad\quad \textbf{if} $t \bmod C = 0$ \textbf{then} 更新目标网络$\theta^- \leftarrow \theta$ \\
+15 & \quad \textbf{end for} \\
+16 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{策略梯度（Policy Gradient）算法伪代码}
+\label{tab:policy_gradient}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textnormal{步骤} & \textnormal{操作} \\
+\midrule
+1 & 初始化策略网络参数 $\theta$ \\
+2 & 设置超参数：学习率 $\alpha$，折扣因子 $\gamma$ \\
+3 & \textbf{for} episode = 1 \textbf{to} $N$ \textbf{do} \\
+4 & \quad 根据策略$\pi_\theta$生成轨迹 $\tau = (s_0,a_0,r_1,\dots,s_T)$ \\
+5 & \quad 计算各时刻累积回报 $G_t = \sum_{k=t}^{T} \gamma^{k-t} r_k$ \\
+6 & \quad \textbf{for} $t = 0$ \textbf{to} $T-1$ \textbf{do} \\
+7 & \quad\quad 计算策略对数概率 $\log \pi_\theta(a_t|s_t)$ \\
+8 & \quad\quad 累积梯度：$\Delta\theta \leftarrow \Delta\theta + \gamma^t G_t \nabla_\theta \log \pi_\theta(a_t|s_t)$ \\
+9 & \quad \textbf{end for} \\
+10 & \quad 更新策略参数：$\theta \leftarrow \theta + \alpha \Delta\theta$ \\
+11 & \quad 重置梯度 $\Delta\theta \leftarrow 0$ \\
+12 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{PPO算法伪代码（Clip版本）}
+\label{tab:ppo}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textbf{步骤} & \textbf{操作} \\
+\midrule
+1 & 初始化策略参数 $\theta$ 和价值函数参数 $\phi$ \\
+2 & \textbf{for} $k = 0, 1, 2, \ldots$ \textbf{do} \\
+3 & \quad 使用策略 $\pi_{\theta_k}$ 收集轨迹集 $\mathcal{D}_k$ \\
+4 & \quad 计算优势估计 $\hat{A}_t$（使用GAE等方法） \\
+5 & \quad 计算回报 $\hat{R}_t = \hat{A}_t + V_{\phi_k}(s_t)$ \\
+6 & \quad \textbf{for} 更新次数 $= 1$ \textbf{to} $K$ \textbf{do} \\
+7 & \quad\quad 从$\mathcal{D}_k$中随机采样小批量数据 \\
+8 & \quad\quad 计算比率 $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_k}(a_t|s_t)}$ \\
+9 & \quad\quad 计算裁剪目标函数： \\
+10 & \quad\quad $L^{CLIP}(\theta) = E_t[\min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t)]$ \\
+11 & \quad\quad 计算价值函数损失 $L^{VF}(\phi) = E_t[||V_\phi(s_t) - \hat{R}_t||^2]$ \\
+12 & \quad\quad 更新参数：$\theta \leftarrow \theta + \alpha \nabla(L^{CLIP} - c_1 L^{VF} + c_2 S)$ \\
+13 & \quad \quad 组合损失：$L(\theta, \phi) = -L^{CLIP}(\theta) + c_1 L^{VF}(\phi) - c_2 S$ \\
+13 & \quad\quad （其中$S$是熵奖励，$c_1,c_2$是系数） \\
+14 & \quad \quad 使用梯度下降更新 $\theta$ 和 $\phi$： \\
+15& \quad \quad \quad $\theta \leftarrow \theta - \alpha \nabla_{\theta} L(\theta, \phi)$ \\
+16& \quad \quad \quad $\phi \leftarrow \phi - \alpha \nabla_{\phi} L(\theta, \phi)$ \\
+17 & \quad \textbf{end for} \\
+18 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{DDPG算法伪代码}
+\label{tab:ddpg}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textnormal{步骤} & \textnormal{操作} \\
+\midrule
+1 & 初始化Actor网络参数$\theta^\mu$和Critic网络参数$\theta^Q$ \\
+2 & 初始化目标网络参数$\theta^{\mu'} \leftarrow \theta^\mu$, $\theta^{Q'} \leftarrow \theta^Q$ \\
+3 & 创建经验回放缓冲区$\mathcal{R}$（容量$N$） \\
+  
+4 & 设置超参数：学习率$\alpha_\mu$, $\alpha_Q$，折扣因子$\gamma$，软更新系数$\tau$ \\
+5 & 初始化探索噪声过程$\mathcal{N}$（如OU过程） \\
+  
+6 & \textbf{for} episode = 1 \textbf{to} $M$ \textbf{do} \\
+  
+7 & \quad 重置环境，获得初始状态$s_0$ \\
+8 & \quad 重置噪声$\mathcal{N}$ \\
+  
+9 & \quad \textbf{for} $t = 0$ \textbf{to} $T-1$ \textbf{do} \\
+  
+10 & \qquad 选择动作$a_t = \mu(s_t|\theta^\mu) + \mathcal{N}_t$ \\
+  
+11 & \qquad 执行$a_t$，观测奖励$r_t$和下一状态$s_{t+1}$ \\
+  
+12 & \qquad 存储转移$(s_t, a_t, r_t, s_{t+1})$到$\mathcal{R}$ \\
+  
+13 & \qquad 从$\mathcal{R}$随机采样小批量转移$(s_i, a_i, r_i, s_{i+1})$ \\
+  
+14 & \qquad 计算目标值： \\
+15  & \qquad $y_i = \begin{cases} 
+  r_i & \text{终止状态} \\
+  r_i + \gamma Q'(s_{i+1}, \mu'(s_{i+1}|\theta^{\mu'})|\theta^{Q'}) & \text{否则}
+  \end{cases}$ \\
+  
+16 & \qquad 更新Critic：最小化$\frac{1}{m}\sum_i (y_i - Q(s_i,a_i|\theta^Q))^2$ \\
+  
+17 & \qquad 更新Actor：梯度上升$\nabla_{\theta^\mu}J \approx \frac{1}{m}\sum_i\nabla_a Q\nabla_{\theta^\mu}\mu$ \\
+  
+18 & \qquad 软更新目标网络： \\
+19 & \qquad $\theta^{Q'} \leftarrow \tau\theta^Q + (1-\tau)\theta^{Q'}$ \\
+20 & \qquad $\theta^{\mu'} \leftarrow \tau\theta^\mu + (1-\tau)\theta^{\mu'}$ \\
+  
+21 & \quad \textbf{end for} \\
+  
+22 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\caption{MAPPO算法伪代码}
+\label{tab:mappo}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textbf{步骤} & \textbf{描述} \\
+\midrule
+1 & \textbf{初始化}：\\
+2 & \quad \quad 策略网络 $\pi_{\theta_i}$ 和值函数网络 $V_{\phi}$（$i=1,\dots,N$ 表示智能体）\\
+3 & \quad \quad 经验缓存 $\mathcal{B}$，容量为 $T \times N$（$T$ 为轨迹长度）\\
+  
+4 & \textbf{for} 训练轮次 $= 1, 2, \dots, K$ \textbf{do} \\
+5 & \quad 收集数据：\\
+6 & \quad \quad \textbf{for} 每个智能体 $i=1,\dots,N$ \textbf{并行执行}：\\
+7 & \quad \quad \quad 使用当前策略 $\pi_{\theta_i}$ 与环境交互，生成轨迹 $\tau_i = (s_t, a_t^i, r_t, s_{t+1})$\\
+8 & \quad \quad \quad 存储 $\tau_i$ 到 $\mathcal{B}$\\
+
+9 & \quad 计算优势估计：\\
+10 & \quad \quad 使用GAE（Generalized Advantage Estimation）计算优势值 $\hat{A}_t$：\\
+11 & \quad \quad $\delta_t = r_t + \gamma V_{\phi}(s_{t+1}) - V_{\phi}(s_t)$\\
+12 & \quad \quad $\hat{A}_t = \sum_{l=0}^{T-t} (\gamma \lambda)^l \delta_{t+l}$\\
+
+13 & \quad 策略更新阶段：\\
+14 & \quad \quad \textbf{for} 更新次数 $= 1, 2, \dots, E$ \textbf{do} \\
+15 & \quad \quad \quad 从 $\mathcal{B}$ 中采样小批量数据\\
+16 & \quad \quad \quad 计算策略损失（含Clip机制）：\\
+17 & \quad \quad $\mathcal{L}^{CLIP}(\theta_i) = \mathbb{E}_t\left[\min\left( \rho_t^i \hat{A}_t, \text{clip}(\rho_t^i, 1-\epsilon, 1+\epsilon) \hat{A}_t \right)\right]$\\
+18 & \quad \quad \quad 其中 $\rho_t^i = \frac{\pi_{\theta_i}(a_t^i|s_t)}{\pi_{\theta_{i}^{old}}(a_t^i|s_t)}$\\
+
+19 & \quad \quad \quad 计算值函数损失：\\
+20 & \quad \quad $\mathcal{L}^{VF}(\phi) = \mathbb{E}_t\left[ (V_{\phi}(s_t) - V_t^{targ})^2 \right]$\\
+21  & \quad \quad \quad 其中 $V_t^{targ} = \hat{A}_t + V_{\phi_{old}}(s_t)$\\
+
+22 & \quad \quad \quad 计算熵奖励：$\mathcal{L}^{ENT}(\theta_i) = \mathbb{E}_t\left[ \log \pi_{\theta_i}(a_t^i|s_t) \right]$\\
+23 & \quad \quad \quad 联合更新参数：\\
+24  & \quad \quad $\theta_i \leftarrow \theta_i - \eta_{\pi} \nabla_{\theta_i} (\mathcal{L}^{CLIP} - c_1 \mathcal{L}^{VF} + c_2 \mathcal{L}^{ENT})$\\
+25  & \quad \quad $\phi \leftarrow \phi - \eta_{V} \nabla_{\phi} \mathcal{L}^{VF}$\\
+
+26 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}[!ht]
+\centering
+\caption{MADDPG算法伪代码}
+\label{tab:maddpg}
+\begin{tabular}{lp{0.8\textwidth}}
+\toprule
+\textbf{步骤} & \textbf{描述} \\
+\midrule
+1 & \textbf{初始化}：\\
+2   & \quad \quad 每个智能体$i$的Actor网络$\mu_{\theta_i}$和Critic网络$Q_{\phi_i}$ \\
+3   & \quad \quad 目标网络$\mu_{\theta_i'}$和$Q_{\phi_i'}$（$\theta_i' \leftarrow \theta_i,\ \phi_i' \leftarrow \phi_i$）\\
+4   & \quad \quad 经验回放缓存$\mathcal{D}$，容量为$N$ \\
+5   & \quad \quad 探索噪声过程（如OU噪声）\\
+
+6 & \textbf{for} 回合数 = $1, 2, \dots, M$ \textbf{do} \\
+7 & \quad 初始化随机过程，获取初始状态$s = (s_1, \dots, s_n)$ \\
+8 & \quad \textbf{for} 时间步 $t = 1, 2, \dots, T$ \textbf{do} \\
+9 & \quad\quad \textbf{for} 每个智能体$i=1,\dots,n$ \textbf{do} \\
+10 & \quad\quad\quad 根据当前策略和噪声选择动作：$a_i = \mu_{\theta_i}(s_i) + \mathcal{N}_t$ \\
+11 & \quad\quad \textbf{end for} \\
+12 & \quad\quad 执行联合动作$a = (a_1, \dots, a_n)$，观测奖励$r = (r_1, \dots, r_n)$和下一状态$s'$ \\
+13 & \quad\quad 存储转移$(s, a, r, s')$到$\mathcal{D}$ \\
+14 & \quad\quad 从$\mathcal{D}$中采样随机小批量转移样本\\
+
+15 & \quad\quad \textbf{for} 每个智能体$i$ \textbf{do} \\
+16 & \quad\quad\quad 计算目标Q值：\\
+17 & \quad\quad\quad $y_i = r_i + \gamma Q_{\phi_i'}(s', \mu_{\theta_1'}(s'_1), \dots, \mu_{\theta_n'}(s'_n))$ \\
+18 & \quad\quad\quad 更新Critic网络：\\
+19 & \quad\quad\quad $\mathcal{L}(\phi_i) = \mathbb{E}[(y_i - Q_{\phi_i}(s, a_1, \dots, a_n))^2]$ \\
+20 & \quad\quad\quad 更新Actor网络：\\
+21 & \quad\quad\quad $\nabla_{\theta_i} J \approx \mathbb{E}[\nabla_{a_i}Q_{\phi_i}(s, a_1, \dots, a_n)\nabla_{\theta_i}\mu_{\theta_i}(s_i)]$ \\
+
+22 & \quad\quad\quad 软更新目标网络：\\
+23 & \quad\quad\quad $\theta_i' \leftarrow \tau \theta_i + (1-\tau)\theta_i'$ \\
+24 & \quad\quad\quad $\phi_i' \leftarrow \tau \phi_i + (1-\tau)\phi_i'$ \\
+25 & \quad\quad \textbf{end for} \\
+26 & \quad \textbf{end for} \\
+27 & \textbf{end for} \\
+\bottomrule
+\end{tabular}
+\end{table}

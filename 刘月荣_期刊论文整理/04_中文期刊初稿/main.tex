@@ -1,0 +1,432 @@
+\documentclass[UTF8,zihao=-4,fontset=none]{ctexart}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{fontspec}
+
+\IfFontExistsTF{Noto Serif CJK SC}{
+  \setCJKmainfont{Noto Serif CJK SC}
+  \setCJKsansfont{Noto Sans CJK SC}
+  \setCJKmonofont{Noto Sans Mono CJK SC}
+  \setCJKfamilyfont{zhhei}{Noto Sans CJK SC}
+}{
+  \setCJKmainfont{Songti SC}
+  \setCJKsansfont{Heiti SC}
+  \setCJKmonofont{PingFang SC}
+  \setCJKfamilyfont{zhhei}{Heiti SC}
+}
+\newcommand{\heiti}{\CJKfamily{zhhei}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\setlist[itemize]{leftmargin=2em,itemsep=0.2em}
+\setlist[enumerate]{leftmargin=2em,itemsep=0.2em}
+\captionsetup{font=small,labelsep=quad}
+
+\newcommand{\figplaceholder}[3]{
+\begin{figure}[htbp]
+  \centering
+  \fbox{
+  \begin{minipage}{0.92\linewidth}
+    \vspace{0.8em}
+    \textbf{待重绘图：}#1
+
+    \vspace{0.5em}
+    \textbf{建议内容：}#2
+
+    \vspace{0.5em}
+    \textbf{原始材料位置：}{\footnotesize\ttfamily\detokenize{#3}}
+    \vspace{0.8em}
+  \end{minipage}}
+  \caption{#1}
+\end{figure}
+}
+
+\title{\heiti 考虑异步到站特征的改进MAPPO公交动态驻站控制方法}
+\author{
+刘月荣$^{1}$ \quad 范文博$^{1}$\thanks{作者信息、通信作者和基金项目待根据投稿要求补充。}\\
+\small $^{1}$西南交通大学交通运输与物流学院，四川 成都 611756
+}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+为缓解城市公交运行中的串车现象，降低乘客等待时间并改善车辆资源利用均衡性，提出一种考虑公交异步到站特征的改进多智能体近端策略优化（multi-agent proximal policy optimization, MAPPO）动态驻站控制方法。首先，将公交动态驻站控制问题建模为多智能体强化学习任务，以车辆前向车头时距、后向车头时距和车内乘客数作为局部观测状态，以归一化驻站时长作为连续控制动作，并构建兼顾车头时距稳定性和乘客等待成本的奖励函数。其次，针对公交车辆并非同步到站、驻站决策具有事件驱动特征的问题，构建车辆到站事件图，并在MAPPO策略网络中引入图注意力网络，学习相邻车辆到站事件对当前车辆决策的影响强度。最后，分别基于理想环形线路算例和成都市T34路公交真实线路场景开展仿真验证。结果表明：在T34路实例中，所提方法的乘客平均等待时间、车辆平均驻站时间、乘客平均旅行时间和车辆平均占用离散度分别为188 s、13 s、1223 s和1.6，均优于无控制、固定车头时距控制、前向车头时距控制、后向车头时距控制和原始MAPPO策略。与原始MAPPO相比，所提方法在上述4项指标上分别降低7.84\%、27.78\%、2.94\%和11.11\%。研究结果说明，引入事件图注意力机制有助于提升公交异步到站场景下多车辆协同驻站决策能力。
+
+\textbf{关键词：}公交串车；动态驻站控制；多智能体强化学习；MAPPO；图注意力网络；事件图
+\end{abstract}
+
+\section{引言}
+
+公交串车是高频公交线路运行中常见的服务可靠性问题。受道路交通流波动、信号交叉口延误、站点客流随机到达和车辆运行扰动等因素影响，前后车辆的车头时距会逐渐偏离计划值。一旦前车因乘客较多或道路延误而运行变慢，后车容易追近前车；前车承担更多乘客，后车载客不足，扰动进一步放大，最终形成车辆聚集运行。串车不仅增加乘客等待时间，也会造成公交车辆运力利用不均衡。
+
+为抑制公交串车，已有研究主要从驻站控制、限流、跳站、短线调度和速度控制等方面开展。其中，驻站控制因实施方式相对直接，在实际公交调度中具有较强可操作性。典型驻站策略包括基于时刻表的控制、基于固定车头时距的控制、基于前向或后向车头时距的控制等。这类方法逻辑清晰，便于部署，但通常依赖预设规则或局部车头时距信息。在客流和运行时间随机波动较强的环境中，固定规则难以同时兼顾车头时距稳定和乘客时间成本。
+
+近年来，强化学习为公交动态控制提供了新的思路。强化学习不需要预先给出每种状态下的固定控制规则，而是通过与仿真环境交互学习长期收益更优的策略。公交驻站控制具有连续动作、多车辆耦合和长期影响等特点，适合采用多智能体强化学习建模。然而，常规多智能体强化学习方法往往默认智能体在统一时间步上同步决策，而公交驻站控制是典型的事件驱动过程。车辆只有在到达站点并完成上下客服务后才触发驻站决策，前后车辆的决策时间并不一致。因此，如何刻画异步到站事件之间的相互影响，是将多智能体强化学习用于公交驻站控制时需要解决的关键问题。
+
+针对上述问题，本文提出一种考虑异步到站特征的改进MAPPO公交动态驻站控制方法。本文的主要工作包括：1）构建公交运行和乘客上下车过程模型，将公交动态驻站控制建模为多智能体强化学习任务；2）设计包含前向车头时距、后向车头时距和车内乘客数的状态空间，以及连续驻站动作空间；3）构建兼顾车头时距稳定性和乘客等待成本的奖励函数；4）基于车辆到站事件构建事件图，在MAPPO策略网络中引入图注意力机制，以表征相邻车辆异步到站事件对当前车辆决策的影响；5）通过环形线路算例和成都T34路真实线路实例验证所提方法的有效性。
+
+\section{公交动态驻站控制问题描述}
+
+\subsection{公交运行过程}
+
+考虑一条单向公交线路，线路包含$m$个站点，记为$S=\{s_1,s_2,\ldots,s_m\}$；系统中运行$n$辆公交车，记为$B=\{b_1,b_2,\ldots,b_n\}$。车辆按照发车顺序运行，不考虑超车和跳站。车辆到达站点后，首先完成乘客上下车服务；随后根据当前运行状态决定是否进行额外驻站控制；驻站结束后离开当前站点并驶向下一站。
+
+设$ta_{i,j}$和$td_{i,j}$分别表示车辆$b_i$到达和离开站点$s_j$的时刻，$\omega_{i,j}$表示车辆在站点$s_j$完成乘客上下车所需服务时间，$th_{i,j}$表示额外驻站控制时间。则车辆离站时刻为
+\begin{equation}
+td_{i,j}=ta_{i,j}+\omega_{i,j}+th_{i,j}.
+\end{equation}
+
+若车辆从站点$s_{j-1}$行驶至$s_j$的运行时间为$t_{i,j-1}$，则到站时刻满足
+\begin{equation}
+ta_{i,j}=td_{i,j-1}+t_{i,j-1}, \quad j=2,3,\ldots,m.
+\end{equation}
+在环形线路场景中，车辆完成一次循环后返回起始站点；在线形线路场景中，车辆到达终点站并完成乘客下车后退出本轮运行。
+
+\subsection{乘客到达与上下车过程}
+
+乘客到达站点具有随机性。本文假设站点$s_j$的乘客到达服从泊松过程，到达率为$\lambda_j$。对于车辆$b_i$，在其与前车$b_{i-1}$到达站点$s_j$的时间间隔内新增乘客数量为$n_{i,j}$，车头时距为
+\begin{equation}
+h_{i,j}=ta_{i,j}-ta_{i-1,j}.
+\end{equation}
+站点等待登上车辆$b_i$的乘客需求由新增乘客和前车未能服务的滞留乘客共同构成：
+\begin{equation}
+u_{i,j}=l_{i-1,j}+n_{i,j}.
+\end{equation}
+
+设车辆最大载客量为$U$，车辆到达站点$s_j$前车内乘客数为$o_{i,j-1}$，下车人数为$A_{i,j}$，实际上车人数为$\hat{u}_{i,j}$。受车辆容量限制，实际上车人数为
+\begin{equation}
+\hat{u}_{i,j}=\min\{u_{i,j}, U-o_{i,j-1}+A_{i,j}\}.
+\end{equation}
+滞留乘客数量为
+\begin{equation}
+l_{i,j}=u_{i,j}-\hat{u}_{i,j}.
+\end{equation}
+车辆离开站点后的车内乘客数更新为
+\begin{equation}
+o_{i,j}=o_{i,j-1}+\hat{u}_{i,j}-A_{i,j}.
+\end{equation}
+
+若单个乘客上车时间为$t_b$，下车时间为$t_a$，且车辆上下客可并行进行，则站点服务时间可表示为
+\begin{equation}
+\omega_{i,j}=\max\{t_a A_{i,j}, t_b \hat{u}_{i,j}\}.
+\end{equation}
+该设置能够反映乘客需求波动对车辆停站时间和后续车头时距的影响。
+
+\figplaceholder
+{公交运行与驻站控制流程示意图}
+{建议重绘一张流程图，展示车辆到站、上下客、状态观测、驻站决策、离站、环境反馈的闭环过程。}
+{刘月荣_期刊论文整理/00_原始材料/2022级-刘月荣-论文及相关资料/学位论文-终稿/figures/公交运行仿真设计.png；也可参考 chapter_02.tex 中“基于强化学习驻站控制的公交运行流程”部分。}
+
+\section{基于事件图注意力的改进MAPPO驻站控制模型}
+
+\subsection{多智能体强化学习建模}
+
+公交驻站控制是一个多车辆协同决策问题。本文将每辆公交车视为一个智能体。车辆$b_i$在$t$时刻到达某站点并完成上下客后，根据局部观测状态$s_{i,t}$选择驻站动作$a_{i,t}$。当车辆运行至后续站点后，系统根据车头时距变化和乘客等待成本反馈奖励$r_{i,t}$。
+
+状态空间由车辆与前后车辆的相对运行关系及车内乘客状态构成：
+\begin{equation}
+s_{i,t}=(h^-_{i,t},h^+_{i,t},o_{i,j}/Z),
+\end{equation}
+其中，$h^-_{i,t}$表示车辆$b_i$与前车的前向车头时距，$h^+_{i,t}$表示车辆$b_i$与后车的后向车头时距，$o_{i,j}$表示车辆离开站点$s_j$时的车内乘客数，$Z$为归一化常数。
+
+动作空间定义为连续变量：
+\begin{equation}
+a_{i,t}\in[0,1].
+\end{equation}
+将其映射为实际驻站时长：
+\begin{equation}
+\Delta d_{i,t}=a_{i,t}\Delta T,
+\end{equation}
+其中$\Delta T$为单次驻站允许的最大控制时长。连续动作空间可以避免离散驻站时长带来的粗粒度控制问题，使模型能够更细致地调整车辆离站时刻。
+
+\subsection{奖励函数设计}
+
+驻站控制的目标并不是简单地让车辆多停。若驻站时间过长，虽然可能拉开车距，但会增加车内乘客延误；若完全不驻站，车辆又容易发生串车。为平衡运行稳定性和乘客时间成本，本文设计如下奖励函数：
+\begin{equation}
+r_{i,t}=-\omega_1 CV^2-\omega_2 T_i^w,
+\end{equation}
+其中，$CV^2$表示车头时距变异系数平方，用于度量车头时距离散程度：
+\begin{equation}
+CV^2=\frac{\mathrm{Var}[h]}{E^2[h]}.
+\end{equation}
+$CV^2$越小，说明线路车辆分布越均衡，串车风险越低。$T_i^w$表示与车辆$b_i$相关的乘客等待时间成本，包括站台等待时间和因驻站造成的车内额外等待时间。$\omega_1$和$\omega_2$为权重参数，用于调节车头时距稳定性和乘客时间成本之间的相对重要性。
+
+该奖励函数的含义比较直接：如果某次驻站决策使车辆间隔更均匀，同时没有过度增加乘客等待，则获得较高奖励；反之，如果车辆仍然聚集或乘客时间成本增加，则受到惩罚。
+
+\subsection{异步到站事件图构建}
+
+常规多智能体强化学习通常在统一时间步上更新所有智能体状态和动作。但公交驻站控制不是同步决策。车辆只有到达站点时才需要决策，不同车辆到站时刻并不相同。若直接采用普通MAPPO，模型难以充分表达“前后车辆近期到站事件对当前车辆决策的影响”。
+
+为刻画这种异步关联，本文构建车辆到站事件图$G=(V,E)$。图中每个节点表示一次车辆到站事件。将节点$(i,t)$定义为车辆$b_i$在$t$时刻到达某站点的事件。在当前车辆两次到站之间的时间窗内，其他相邻车辆的到站事件被视为可能影响当前决策的邻居事件。考虑到公交运行影响具有局部性，本文主要关注当前车辆前后相邻车辆的到站事件。
+
+进一步地，根据车辆发车顺序，将邻居事件划分为上游事件集合$\mathcal{N}^u_{i,t}$和下游事件集合$\mathcal{N}^d_{i,t}$：
+\begin{equation}
+\mathcal{N}^u_{i,t}=\{(i',t')\in V:i'>i,t-\Delta_{i,t}<t'\leq t\},
+\end{equation}
+\begin{equation}
+\mathcal{N}^d_{i,t}=\{(i',t')\in V:i'<i,t-\Delta_{i,t}<t'\leq t\}.
+\end{equation}
+这样可以分别学习前后车辆事件对当前车辆驻站决策的影响。
+
+\figplaceholder
+{公交异步到站事件图示意图}
+{建议重绘事件图：节点表示车辆到站事件，边表示时间窗内前后车辆事件对当前事件的影响，区分上游与下游事件。}
+{刘月荣_期刊论文整理/00_原始材料/2022级-刘月荣-论文及相关资料/学位论文-终稿/figures/事件图.jpg；辅助材料：figures/公交到站的异步特性.jpg。}
+
+\subsection{图注意力增强的MAPPO算法}
+
+MAPPO是PPO在多智能体场景中的扩展，适用于多车辆协同控制问题。本文在MAPPO策略网络中引入图注意力网络（graph attention network, GAT），用于从事件图中聚合相邻车辆到站事件信息。
+
+对于当前到站事件$(i,t)$及其邻居事件$(i',t')$，GAT首先根据节点特征计算注意力权重：
+\begin{equation}
+\alpha_{(i,t)(i',t')}=
+\frac{
+\exp\left(\mathrm{LeakyReLU}\left(\bm{a}^{\mathrm{T}}[\bm{W}h_{i,t}\Vert \bm{W}h_{i',t'}]\right)\right)
+}{
+\sum_{(k,\tau)\in\mathcal{N}_{i,t}}
+\exp\left(\mathrm{LeakyReLU}\left(\bm{a}^{\mathrm{T}}[\bm{W}h_{i,t}\Vert \bm{W}h_{k,\tau}]\right)\right)
+},
+\end{equation}
+其中，$h_{i,t}$为当前事件特征，$h_{i',t'}$为邻居事件特征，$\bm{W}$和$\bm{a}$为可学习参数，$\Vert$表示向量拼接。注意力权重越大，说明对应邻居事件对当前决策越重要。
+
+随后，对邻居事件特征进行加权聚合，得到其他车辆影响向量$M_{i,t}$。该向量与当前车辆状态共同输入策略网络，输出驻站动作的概率分布。与普通MAPPO相比，改进MAPPO不只依赖当前车辆的局部状态，还能根据异步事件图有选择地感知前后车辆近期行为。
+
+本文采用演员--评论员框架。策略网络负责生成驻站动作，评价网络负责估计状态价值。考虑公交车辆同质性，各车辆共享一套网络参数。训练过程中，通过广义优势估计计算优势函数，并采用PPO裁剪目标限制策略更新幅度，以提高训练稳定性。
+
+\figplaceholder
+{改进MAPPO策略网络结构图}
+{建议重绘算法框架图：输入为当前车辆状态和事件图邻居信息，经GAT聚合后进入Actor网络，输出驻站动作；Critic网络估计状态价值。}
+{刘月荣_期刊论文整理/00_原始材料/2022级-刘月荣-论文及相关资料/学位论文-终稿/figures/策略网络.jpg；figures/评价网络.jpg。}
+
+\section{算例仿真与实例分析}
+
+\subsection{评价指标与对比策略}
+
+为评价不同控制策略的运行效果，本文从乘客服务效率和车辆运行均衡性两方面构建评价指标。
+
+\begin{itemize}
+  \item 平均等待时间（average waiting time, AWT）：乘客到达站点后至上车前的平均等待时间，反映公交服务响应性。
+  \item 平均驻站时间（average holding time, AHT）：车辆在站点执行额外驻站控制的平均时长，反映控制干预程度。
+  \item 平均旅行时间（average travel time, ATT）：乘客从进入系统等待至完成行程离开的平均总时间，反映综合出行效率。
+  \item 平均车辆占用离散度（average occupancy dispersion, AOD）：用车辆载客量离散程度表征运力资源分布均衡性，数值越低说明车辆载客越均衡。
+\end{itemize}
+
+对比策略包括：无控制策略（NH）、基于固定车头时距的控制策略（HH）、基于时刻表的控制策略（SH，仅用于环形线路算例）、基于前向车头时距的控制策略（FH）、基于后向车头时距的控制策略（BH）、原始MAPPO策略和本文提出的改进MAPPO策略。
+
+\subsection{环形线路算例}
+
+首先构建理想单向环形线路作为算例场景。线路共设12个均匀分布的公交站点，运行6辆同构公交车。相邻站点间距为1 km，车辆站间运行速度设为20 km/h，初始计划车头时距为360 s。乘客到达服从泊松过程，乘客下车站点在下游站点中随机选择。每位乘客上车时间设为3 s，下车时间设为1.8 s，单次最大驻站时间为180 s。当计算得到的驻站时间小于30 s时，视为不实施驻站控制。
+
+强化学习模型训练300回合，每回合包含3 h动态仿真过程，其中前25 min作为预热阶段。模型训练所采用的主要超参数见表\ref{tab:ring_mappo_hyperparameters}。训练完成后，对各控制策略分别进行20次独立仿真测试，并比较车辆轨迹、载客量分布及各项评价指标。
+
+\begin{table}[htbp]
+\centering
+\caption{环形线路算例中改进MAPPO算法超参数取值}
+\label{tab:ring_mappo_hyperparameters}
+\begin{tabular}{>{\centering\arraybackslash}m{2.0cm}>{\centering\arraybackslash}m{4.0cm}>{\centering\arraybackslash}m{2.0cm}>{\centering\arraybackslash}m{2.0cm}}
+\toprule
+参数类别 & 参数名称 & 符号 & 取值 \\
+\midrule
+\multirow{3}{*}{优化器}
+& 策略网络学习率 & $\alpha_{\mathrm{Actor}}$ & 1e-4 \\
+& 价值网络学习率 & $\alpha_{\mathrm{Critic}}$ & 1e-4 \\
+& Adam $\epsilon$参数 & $\epsilon$ & 1e-5 \\
+\midrule
+\multirow{2}{*}{梯度控制}
+& Actor梯度裁剪阈值 & $c_{\mathrm{Actor}}$ & 5 \\
+& Critic梯度裁剪阈值 & $c_{\mathrm{Critic}}$ & 5 \\
+\midrule
+\multirow{5}{*}{强化学习}
+& 折扣因子 & $\gamma$ & 0.9 \\
+& GAE参数 & $\lambda$ & 0.95 \\
+& 裁剪参数 & $\epsilon_{\mathrm{clip}}$ & 0.2 \\
+& 小批量大小 & $B$ & 64 \\
+& 每个小批量的更新次数 & $k$ & 3 \\
+\midrule
+网络结构 & 注意力头数 & $K$ & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figplaceholder
+{环形线路算例场景与乘客到达率}
+{建议合并重绘：左侧为环形线路站点和车辆运行示意，右侧为各站点乘客到达率柱状图。}
+{线路图：figures/公交走廊示意图.jpg 或 figures/公交走廊示意图.png；乘客到达率：figures/环形线路公交站点乘客到达率.png。}
+
+仿真结果表明，在无控制策略下，车辆轨迹出现明显聚集，说明扰动会沿线路传播并导致串车。基于固定车头时距和时刻表的规则控制能够在一定程度上缓解串车，但对随机客流和运行扰动的适应性不足。FH和BH策略相较规则控制更灵活，但仍主要依赖局部车头时距。MAPPO策略通过学习长期奖励，在车辆轨迹和载客均衡方面表现更好。进一步引入事件图注意力后，改进MAPPO能够更充分考虑前后车辆异步到站事件的影响，车辆轨迹更均匀，载客量差异更小。
+
+\figplaceholder
+{环形线路不同策略车辆轨迹对比}
+{建议重绘为多子图或精选对比图，至少包含NH、MAPPO和改进MAPPO；若版面允许，可加入HH、FH、BH。}
+{原始图：figures/NH车辆轨迹.png；figures/HH车辆轨迹.png；figures/FH车辆轨迹.png；figures/BH车辆轨迹.png；figures/MAPPO车辆轨迹.png；figures/改进的MAPPO车辆轨迹.png。}
+
+\figplaceholder
+{环形线路不同策略指标对比}
+{建议根据原始结果重新绘制AWT、AHT、ATT、AOD四个指标的对比图，突出强化学习策略和传统策略差异。}
+{原始图：figures/AWT.png；figures/AHT.png；figures/ATT.png；figures/AOD.png；对应代码与日志主要位于 代码/a_biyelunwen2_15/base_* 目录。}
+
+\subsection{成都T34路实例分析}
+
+为进一步验证方法在实际线路参数下的适用性，选取成都市T34路公交上行方向作为实例场景。该方向为新兴客运站至香沙路，线路全长约21 km，共包含39个站点。研究采用2022年4月1日8:15:00至10:40:00时段数据，共涉及24辆公交车。原始数据包括公交GPS轨迹、站点坐标、线路信息和发车时刻。
+
+数据处理过程包括：剔除超出线路运营范围的异常GPS点；采用卡尔曼滤波对轨迹进行平滑；将GPS点与站点坐标进行匹配以识别车辆到离站时刻；基于起点站附近轨迹提取发车时刻表；根据车辆轨迹和站点位置计算站间距离和站间运行速度。处理后，线路平均运行速度约为25 km/h。为模拟道路运行不确定性，实例仿真中将车辆站间速度设置为$v\times U(0.8,1.2)$，其中$v=25$ km/h。
+
+\figplaceholder
+{成都T34路实例线路与站点需求}
+{建议重绘线路示意和站点乘客到达率。线路图可只保留上行方向，站点需求图应清晰展示39个站点的到达率变化。}
+{线路图：figures/上行方向.png 或 figures/成都市T34路公交线路.png；站点到达率：figures/单线公交站点乘客到达率.png。}
+
+实例中，第一辆车不进行驻站控制，起点站和终点站不实施驻站控制。最大驻站时间仍设为180 s，低于30 s的驻站时间忽略不计。每位乘客上车和下车时间分别为3 s和1.8 s。公交站点首次有车辆到站时，乘客累积时间设为6 min。改进MAPPO模型训练300回合，主要超参数取值见表\ref{tab:t34_mappo_hyperparameters}。训练完成后，将所提方法与NH、HH、FH、BH和原始MAPPO策略进行比较。
+
+\begin{table}[htbp]
+\centering
+\caption{T34路实例中改进MAPPO算法超参数取值}
+\label{tab:t34_mappo_hyperparameters}
+\begin{tabular}{>{\centering\arraybackslash}m{2.0cm}>{\centering\arraybackslash}m{4.0cm}>{\centering\arraybackslash}m{2.0cm}>{\centering\arraybackslash}m{2.0cm}}
+\toprule
+参数类别 & 参数名称 & 符号 & 取值 \\
+\midrule
+\multirow{3}{*}{优化器}
+& 策略网络学习率 & $\alpha_{\mathrm{Actor}}$ & 1e-4 \\
+& 价值网络学习率 & $\alpha_{\mathrm{Critic}}$ & 1e-4 \\
+& Adam $\epsilon$参数 & $\epsilon$ & 1e-5 \\
+\midrule
+\multirow{2}{*}{梯度控制}
+& Actor梯度裁剪阈值 & $c_{\mathrm{Actor}}$ & 15 \\
+& Critic梯度裁剪阈值 & $c_{\mathrm{Critic}}$ & 5 \\
+\midrule
+\multirow{5}{*}{强化学习}
+& 折扣因子 & $\gamma$ & 0.9 \\
+& GAE参数 & $\lambda$ & 0.95 \\
+& 裁剪参数 & $\epsilon_{\mathrm{clip}}$ & 0.2 \\
+& 小批量大小 & $B$ & 256 \\
+& 每个小批量的更新次数 & $k$ & 3 \\
+\midrule
+网络结构 & 注意力头数 & $K$ & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+从车辆运行轨迹看，无控制策略下，线路下游站点出现明显车头时距不均衡，串车现象更为突出。HH、FH和BH策略能够缓解部分串车，但往往需要较多驻站干预，且不同策略在上下游站点的效果并不稳定。原始MAPPO策略相较传统策略具有更强的动态调整能力。改进MAPPO策略进一步利用事件图注意力机制感知相邻车辆异步到站事件，车辆轨迹更平顺，车头时距更加均衡。
+
+\figplaceholder
+{T34路不同控制策略车辆轨迹对比}
+{建议重绘为6个子图或选择NH、HH、MAPPO、改进MAPPO进行重点展示，突出改进MAPPO对下游串车的缓解效果。}
+{原始图：figures/line_NH车辆轨迹.png；figures/line_HH车辆轨迹.png；figures/line_FH车辆轨迹.png；figures/line_BH车辆轨迹.png；figures/line_mappo车辆轨迹.png；figures/line_改进的mappo车辆轨迹.png。}
+
+从载客量分布看，NH策略下车辆载客差异明显，部分车辆拥挤而部分车辆空载率较高。传统控制策略可以改善载客不均衡，但效果有限。改进MAPPO策略下，不同车辆在站点间的载客量变化更平滑，车辆资源利用更均衡。
+
+\figplaceholder
+{T34路不同控制策略载客量分布}
+{建议重绘为热力图或分组折线图，展示各策略下车辆载客量的均衡程度。若版面紧张，可放入补充材料。}
+{原始图：figures/line_NH载客量.png；figures/line_HH载客量.png；figures/line_FH载客量.png；figures/line_BH载客量.png；figures/line_mappo载客量.png；figures/line_amappo_载客量.png。}
+
+不同控制策略在T34路实例中的综合评价结果见表\ref{tab:t34_results}。可以看出，改进MAPPO在4项指标上均取得最优结果。
+
+\begin{table}[htbp]
+\centering
+\caption{T34路实例中不同控制策略评价指标对比}
+\label{tab:t34_results}
+\begin{tabular}{lcccc}
+\toprule
+控制策略 & AWT/s & AHT/s & ATT/s & AOD \\
+\midrule
+NH & 289 & 0 & 1278 & 7.0 \\
+HH & 261 & 51 & 1553 & 1.7 \\
+FH & 215 & 42 & 1467 & 1.8 \\
+BH & 235 & 24 & 1344 & 2.0 \\
+MAPPO & 204 & 18 & 1260 & 1.8 \\
+改进MAPPO & \textbf{188} & \textbf{13} & \textbf{1223} & \textbf{1.6} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+与NH策略相比，改进MAPPO的AWT降低34.95\%，ATT降低4.30\%，AOD降低77.14\%。这说明驻站控制能够有效缓解无控制情况下的车辆聚集和载客不均衡问题。需要注意的是，传统HH、FH和BH策略虽然降低了AWT和AOD，但由于驻站干预较多，ATT反而高于NH策略。也就是说，传统策略在改善车距稳定时可能牺牲乘客总旅行时间。
+
+与原始MAPPO相比，改进MAPPO的AWT、AHT、ATT和AOD分别降低7.84\%、27.78\%、2.94\%和11.11\%。其中，AHT降低幅度较大，说明改进MAPPO并不是通过增加驻站时间来换取系统稳定，而是在较少干预下实现更好的协同控制。这一结果从侧面说明，事件图注意力机制能够为策略网络提供更有效的相邻车辆影响信息，使智能体在异步到站条件下作出更合适的驻站决策。
+
+\figplaceholder
+{T34路站点级AWT、AHT、ATT、AOD对比}
+{建议重绘为4个子图，分别展示各站点或各策略的AWT、AHT、ATT、AOD。主文可保留总表，站点级图可择优放置。}
+{原始图：figures/line_awt.png；figures/line_aht对比.png；figures/line_att.png；figures/line_aod.png；对比图：figures/line_awt对比.png；figures/line_att对比.png；figures/line_aod_对比.png。}
+
+\section{结论}
+
+本文针对城市公交运行中的串车问题，提出了一种考虑异步到站特征的改进MAPPO动态驻站控制方法。主要结论如下。
+
+1）将公交动态驻站控制建模为多智能体强化学习问题，设计了以前向车头时距、后向车头时距和车内乘客数为核心的状态空间，以归一化驻站时长为连续动作空间，并构建了兼顾车头时距稳定性和乘客等待成本的奖励函数。该建模方式能够同时描述公交运行稳定和乘客服务效率。
+
+2）针对公交车辆到站和驻站决策不同步的问题，构建车辆到站事件图，并在MAPPO策略网络中引入图注意力机制。事件图用于刻画时间窗内相邻车辆到站事件与当前决策事件之间的关联，图注意力网络用于自适应学习不同邻居事件的重要程度，从而增强智能体对异步交互影响的感知能力。
+
+3）环形线路算例和成都T34路实例结果表明，所提方法能够有效降低乘客等待时间、乘客旅行时间和车辆占用离散度，并减少平均驻站干预。在T34路实例中，改进MAPPO相较原始MAPPO在AWT、AHT、ATT和AOD指标上分别降低7.84\%、27.78\%、2.94\%和11.11\%。
+
+4）本文仍存在一定局限。当前研究以单线路仿真验证为主，车辆性能被假设为同质，乘客行为也未考虑放弃等待等复杂情形。后续研究可进一步扩展至多线路共线运行场景，考虑车辆异质性和乘客行为差异，并结合真实公交运行系统开展在线或半实物验证。
+
+\section*{图表重绘说明}
+
+本文初稿中的图位均为占位标注。后续重绘建议优先完成以下图表：
+
+\begin{enumerate}
+  \item 方法框架图：整合公交运行、事件图、GAT和MAPPO决策过程。
+  \item 环形线路算例图：线路场景、车辆轨迹、核心指标对比。
+  \item T34路实例图：线路与需求、车辆轨迹、站点级指标对比。
+  \item 结果总表：保留表\ref{tab:t34_results}，后续补充多次仿真的标准差或置信区间。
+\end{enumerate}
+
+\begin{thebibliography}{99}
+
+\bibitem{Daganzo2009}
+Daganzo C F. A headway-based approach to eliminate bus bunching: Systematic analysis and comparisons[J]. Transportation Research Part B: Methodological, 2009, 43(10): 913--921.
+
+\bibitem{Xuan2011}
+Xuan Y, Argote J, Daganzo C F. Dynamic bus holding strategies for schedule reliability: Optimal linear control and performance analysis[J]. Transportation Research Part B: Methodological, 2011, 45(10): 1831--1845.
+
+\bibitem{Bartholdi2012}
+Bartholdi J J, Eisenstein D D. A self-coordinating bus route to resist bus bunching[J]. Transportation Research Part B: Methodological, 2012, 46(4): 481--491.
+
+\bibitem{Alesiani2018}
+Alesiani F, Gkiotsalitis K. Reinforcement learning-based bus holding for high-frequency services[C]//2018 IEEE 21st International Conference on Intelligent Transportation Systems. 2018: 3162--3168.
+
+\bibitem{Chen2016}
+Chen W, Zhou K, Chen C. Real-time bus holding control on a transit corridor based on multi-agent reinforcement learning[C]//2016 IEEE 19th International Conference on Intelligent Transportation Systems. 2016: 100--106.
+
+\bibitem{Wang2020}
+Wang J, Sun L. Dynamic holding control to avoid bus bunching: A multi-agent deep reinforcement learning framework[J]. Transportation Research Part C: Emerging Technologies, 2020, 116: 102661.
+
+\bibitem{Wang2021}
+Wang J, Sun L. Reducing bus bunching with asynchronous multi-agent reinforcement learning[EB/OL]. arXiv:2105.00376, 2021.
+
+\bibitem{Liu2024}
+刘东, 张大鹏, 万芸, 等. 基于深度强化学习的单线路公交动态驻站控制策略研究[J]. 交通运输系统工程与信息, 2024, 24(5): 173--184.
+
+\bibitem{Huang2018}
+黄青霞, 贾斌, 强生杰, 等. 基于驻站和限流的组合公交控制策略研究[J]. 交通运输系统工程与信息, 2018, 18(4): 103--109.
+
+\bibitem{Jiang2023}
+姜瑞森, 胡大伟, 孙倩, 等. 基于实时车辆信息共享的公交动态控制策略[J]. 长安大学学报(自然科学版), 2023, 43(6): 95--105.
+
+\bibitem{Velickovic2017}
+Veli{\v{c}}kovi{\'c} P, Cucurull G, Casanova A, et al. Graph attention networks[EB/OL]. arXiv:1710.10903, 2017.
+
+\bibitem{Schulman2017}
+Schulman J, Wolski F, Dhariwal P, et al. Proximal policy optimization algorithms[EB/OL]. arXiv:1707.06347, 2017.
+
+\end{thebibliography}
+
+\end{document}
