@@ -307,7 +307,8 @@ def plot_load(
     raw_buses: list[dict[str, np.ndarray]] | None,
 ) -> Path:
     if raw_buses is None:
-        matrix = digitize_load(FIGURE_DIR / f"{source_stem}载客量.png")
+        load_stem = "line_amappo_" if strategy == "改进MAPPO" else source_stem
+        matrix = digitize_load(FIGURE_DIR / f"{load_stem}载客量.png")
     else:
         matrix = raw_load_by_station(raw_buses)
     save_load_data(strategy, matrix)
