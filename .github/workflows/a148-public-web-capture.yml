@@ -14,14 +14,6 @@ on:
   schedule:
     - cron: "20 3 * * 1-5"
       timezone: "Asia/Seoul"
-  push:
-    branches:
-      - codex/a148-public-page-probe
-    paths:
-      - .github/workflows/a148-public-web-capture.yml
-      - "吴霞_期刊论文整理/03_图表与实验/redraw_scripts/collect_a148_public_web.mjs"
-      - "吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_a148_speed.py"
-
 permissions:
   contents: read
 
