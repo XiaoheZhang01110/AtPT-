@@ -53,7 +53,7 @@ python 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_a
 
 ## GitHub Actions自动采集
 
-工作流位于`.github/workflows/a148-realtime-capture.yml`，名称为`A148 public-web speed capture`。
+工作流位于`.github/workflows/a148-public-web-capture.yml`，名称为`A148 public-web speed capture`。
 
 - 默认在每个工作日韩国时间03:20自动启动完整采集；
 - 手动运行时默认选择`smoke_test`，只进行一次请求；
