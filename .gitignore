@@ -9,6 +9,7 @@
 .venv/
 .venv-*/
 .figure-venv/
+.python_packages/
 venv/
 __pycache__/
 *.py[cod]
