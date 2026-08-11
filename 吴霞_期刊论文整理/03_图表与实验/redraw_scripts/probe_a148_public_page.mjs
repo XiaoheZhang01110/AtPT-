@@ -15,8 +15,7 @@ const allowedBodyHosts = new Set([
   "m.bus.go.kr",
   "topis.seoul.go.kr",
 ]);
-const interestingUrl = /bus|route|line|position|location|arrival|station|stop|veh/i;
-const structuredContent = /json|xml|javascript|text\/plain/i;
+const publicEndpoint = /select(?:VApiTotalstr|RouteInfo|BusposInfo)\.do$/i;
 const sensitiveParameter = /key|token|secret|auth|session|cookie|csrf|credential/i;
 const locationField = /\b(?:tmX|tmY|posX|posY|gpsX|gpsY|lat|latitude|lon|lng|longitude|vehId|plainNo|sectOrd)\b/i;
 const blockedText = /captcha|access denied|forbidden|unusual traffic|robot|\ub85c\ubd07|\uc790\ub3d9\uc785\ub825|\uc811\uadfc\uc774 \ucc28\ub2e8|\ub85c\uadf8\uc778\uc774 \ud544\uc694/i;
@@ -79,6 +78,7 @@ async function firstVisible(locator) {
 
 const networkLog = [];
 const savedResponses = [];
+const parsedEndpointResponses = [];
 const responseTasks = [];
 let responseIndex = 0;
 let browser;
@@ -120,8 +120,8 @@ try {
       }
       if (
         !allowedBodyHosts.has(url.hostname) ||
-        !interestingUrl.test(rawUrl) ||
-        !structuredContent.test(contentType)
+        !publicEndpoint.test(url.pathname) ||
+        !/json/i.test(contentType)
       ) {
         return;
       }
@@ -131,9 +131,13 @@ try {
         return;
       }
       const decoded = body.toString("utf8");
-      if (!/A148/i.test(decoded) && !locationField.test(decoded)) {
+      let payload;
+      try {
+        payload = JSON.parse(decoded);
+      } catch {
         return;
       }
+      parsedEndpointResponses.push({ endpoint: url.pathname, payload });
 
       responseIndex += 1;
       const fileName = safeFileName(responseIndex, rawUrl, contentType);
@@ -221,14 +225,30 @@ try {
   );
 
   const finalText = `${initialText}\n${searchText}\n${routeText}`;
-  const responseEvidence = savedResponses.some(
-    (item) => item.contains_a148 && item.contains_location_fields,
-  );
   const pageHasA148 = /A148/i.test(finalText);
   const pageBlocked = blockedText.test(finalText);
-  const locationEvidence = locationField.test(finalText) || savedResponses.some(
-    (item) => item.contains_location_fields,
+  const searchResponse = parsedEndpointResponses.find(({ endpoint }) =>
+    /selectVApiTotalstr\.do$/i.test(endpoint),
   );
+  const searchResults = searchResponse?.payload?.ResponseVO?.data?.resultList || [];
+  const a148Route = searchResults.find(({ strno }) => String(strno).toUpperCase() === QUERY);
+  const positionResponses = parsedEndpointResponses.filter(({ endpoint }) =>
+    /selectBusposInfo\.do$/i.test(endpoint),
+  );
+  const positionData = positionResponses.at(-1)?.payload?.ResponseVO?.data;
+  const vehiclePositions = positionData?.resultRouteBuspos;
+  const positionEndpointAccessible = Array.isArray(vehiclePositions);
+  const activeVehicleRecords = positionEndpointAccessible ? vehiclePositions.length : 0;
+  const activeVehicleHasCoordinates = vehiclePositions?.some((vehicle) =>
+    Number.isFinite(Number(vehicle.posX ?? vehicle.gpsX)) &&
+    Number.isFinite(Number(vehicle.posY ?? vehicle.gpsY)),
+  ) || false;
+  const routePathPoints = Array.isArray(positionData?.resultRoutePath)
+    ? positionData.resultRoutePath.length
+    : 0;
+  const routeStops = Array.isArray(positionData?.resultRouteStop)
+    ? positionData.resultRouteStop.length
+    : 0;
 
   const summary = {
     tested_at_utc: new Date().toISOString(),
@@ -239,17 +259,23 @@ try {
     search_attempt: searchAttempt,
     route_click: routeClick,
     blocked: pageBlocked,
-    a148_visible_or_returned: pageHasA148 || savedResponses.some((item) => item.contains_a148),
-    location_fields_visible_or_returned: locationEvidence,
-    public_response_with_a148_and_location_fields: responseEvidence,
+    a148_visible_or_returned: pageHasA148 || Boolean(a148Route),
+    a148_route_id: a148Route?.strid ?? null,
+    position_endpoint_accessible_without_key: positionEndpointAccessible,
+    active_a148_vehicle_records: activeVehicleRecords,
+    active_vehicle_coordinates_returned: activeVehicleHasCoordinates,
+    static_route_path_points: routePathPoints,
+    route_stops: routeStops,
     saved_public_responses: savedResponses,
     verdict: pageBlocked
       ? "blocked"
-      : responseEvidence
-        ? "feasible_for_position_sampling"
-        : pageHasA148
-          ? "route_visible_but_no_machine_readable_position_evidence"
-          : "a148_not_found",
+      : activeVehicleHasCoordinates
+        ? "a148_live_positions_observed"
+        : a148Route && positionEndpointAccessible
+          ? "public_position_endpoint_confirmed_but_no_active_a148_vehicle"
+          : pageHasA148
+            ? "route_visible_but_position_endpoint_not_confirmed"
+            : "a148_not_found",
     privacy_note: "No cookies, storage, request/response headers, credentials, or full HAR were saved.",
   };
 
@@ -267,7 +293,10 @@ try {
       `- Initial HTTP status: ${summary.initial_http_status ?? "unknown"}`,
       `- Final URL: ${summary.final_url}`,
       `- A148 visible/returned: ${summary.a148_visible_or_returned}`,
-      `- Location fields visible/returned: ${summary.location_fields_visible_or_returned}`,
+      `- A148 route ID: ${summary.a148_route_id ?? "not found"}`,
+      `- Public position endpoint accessible: ${summary.position_endpoint_accessible_without_key}`,
+      `- Active A148 vehicle records: ${summary.active_a148_vehicle_records}`,
+      `- Static route points / stops: ${summary.static_route_path_points} / ${summary.route_stops}`,
       `- Saved relevant public responses: ${summary.saved_public_responses.length}`,
       "- Safety: no login, key, CAPTCHA bypass, cookies, storage, headers, or full HAR.",
       "",
