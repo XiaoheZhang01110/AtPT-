@@ -1,0 +1,62 @@
+name: A148 no-key public-page probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/a148-public-page-probe
+    paths:
+      - .github/workflows/a148-public-page-probe.yml
+      - "\u5434\u971e_\u671f\u520a\u8bba\u6587\u6574\u7406/03_\u56fe\u8868\u4e0e\u5b9e\u9a8c/redraw_scripts/probe_a148_public_page.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a148-public-page-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PROBE_SCRIPT: \u5434\u971e_\u671f\u520a\u8bba\u6587\u6574\u7406/03_\u56fe\u8868\u4e0e\u5b9e\u9a8c/redraw_scripts/probe_a148_public_page.mjs
+      PROBE_OUTPUT: ${{ runner.temp }}/a148-public-page-probe
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --no-package-lock playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Probe the official public bus webpage
+        run: node "${PROBE_SCRIPT}"
+
+      - name: Publish the probe verdict
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "${PROBE_OUTPUT}/summary.md" ]]; then
+            cat "${PROBE_OUTPUT}/summary.md" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "## A148 no-key public-page probe" >> "${GITHUB_STEP_SUMMARY}"
+            echo "No summary was generated." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload screenshots and sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a148-public-page-probe-${{ github.run_id }}
+          path: ${{ env.PROBE_OUTPUT }}
+          if-no-files-found: error
+          retention-days: 14
