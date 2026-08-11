@@ -20,9 +20,12 @@ import argparse
 import math
 import os
 import sys
+import tempfile
 from pathlib import Path
 
-os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/matplotlib-wuxia-a148-speed")
+os.environ.setdefault(
+    "MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "matplotlib-wuxia-a148-speed")
+)
 
 # Codex installs plotting dependencies into this workspace-local directory.
 # A normal Python environment with matplotlib installed simply ignores it.
@@ -387,7 +390,7 @@ def run_self_test() -> None:
     assert profile["cumulative_distance_raw_km"].is_monotonic_increasing
     assert diagnostics["outbound_complete"] == 1.0
     assert diagnostics["inbound_complete"] == 1.0
-    test_pdf = Path("/private/tmp/a148_speed_self_test.pdf")
+    test_pdf = Path(tempfile.gettempdir()) / "a148_speed_self_test.pdf"
     plot_profile(profile, test_pdf, vehicle)
     assert test_pdf.exists() and test_pdf.stat().st_size > 1000
     print("Self-test passed.")
