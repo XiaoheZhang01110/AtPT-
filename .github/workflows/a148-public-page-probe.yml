@@ -7,7 +7,7 @@ on:
       - codex/a148-public-page-probe
     paths:
       - .github/workflows/a148-public-page-probe.yml
-      - "\u5434\u971e_\u671f\u520a\u8bba\u6587\u6574\u7406/03_\u56fe\u8868\u4e0e\u5b9e\u9a8c/redraw_scripts/probe_a148_public_page.mjs"
+      - "吴霞_期刊论文整理/03_图表与实验/redraw_scripts/probe_a148_public_page.mjs"
 
 permissions:
   contents: read
@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PROBE_SCRIPT: \u5434\u971e_\u671f\u520a\u8bba\u6587\u6574\u7406/03_\u56fe\u8868\u4e0e\u5b9e\u9a8c/redraw_scripts/probe_a148_public_page.mjs
-      PROBE_OUTPUT: ${{ runner.temp }}/a148-public-page-probe
+      PROBE_SCRIPT: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/probe_a148_public_page.mjs
+      PROBE_OUTPUT: /tmp/a148-public-page-probe
 
     steps:
       - name: Check out repository
