@@ -1,0 +1,125 @@
+name: A148 public-web speed capture
+
+on:
+  workflow_dispatch:
+    inputs:
+      capture_mode:
+        description: Choose a one-request test or the complete scheduled capture
+        required: true
+        type: choice
+        default: smoke_test
+        options:
+          - smoke_test
+          - full_capture
+  schedule:
+    - cron: "20 3 * * 1-5"
+      timezone: "Asia/Seoul"
+permissions:
+  contents: read
+
+concurrency:
+  group: a148-public-web-speed-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      TZ: Asia/Seoul
+      CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
+      COLLECTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/collect_a148_public_web.mjs
+      RECONSTRUCTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_a148_speed.py
+      REQUIREMENTS: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/requirements_a148.txt
+      DATA_DIR: 吴霞_期刊论文整理/03_图表与实验/source_data/a148_realtime
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ${{ env.REQUIREMENTS }}
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --no-package-lock playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Install reconstruction dependencies
+        run: python -m pip install --disable-pip-version-check -r "${REQUIREMENTS}"
+
+      - name: Run collector and reconstruction self-tests
+        run: |
+          node "${COLLECTOR}" --self-test
+          python "${RECONSTRUCTOR}" --self-test
+
+      - name: Test the public webpage endpoint
+        if: ${{ env.CAPTURE_MODE == 'smoke_test' }}
+        run: node "${COLLECTOR}" --once --timeout 25 --output-dir "${DATA_DIR}"
+
+      - name: Capture the complete A148 round trip
+        if: ${{ env.CAPTURE_MODE == 'full_capture' }}
+        run: |
+          node "${COLLECTOR}" \
+            --interval 15 \
+            --duration-minutes 230 \
+            --idle-stop-minutes 15 \
+            --timeout 25 \
+            --output-dir "${DATA_DIR}"
+
+      - name: Reconstruct the auditable speed data
+        if: ${{ env.CAPTURE_MODE == 'full_capture' }}
+        shell: bash
+        run: |
+          service_day="$(date +%Y%m%d)"
+          raw_file="${DATA_DIR}/a148_raw_positions_${service_day}.csv"
+          output_file="${DATA_DIR}/a148_reconstructed_speed_profile_${service_day}.csv"
+          if [[ ! -s "${raw_file}" ]]; then
+            echo "::error::No A148 vehicle positions were collected for ${service_day}."
+            exit 3
+          fi
+          python "${RECONSTRUCTOR}" "${raw_file}" \
+            --no-plot \
+            --output-csv "${output_file}"
+
+      - name: Publish the collection summary
+        if: always()
+        shell: bash
+        run: |
+          found_summary=false
+          for summary_file in "${DATA_DIR}"/a148_collection_summary_*.md; do
+            if [[ -f "${summary_file}" ]]; then
+              cat "${summary_file}" >> "${GITHUB_STEP_SUMMARY}"
+              found_summary=true
+            fi
+          done
+          if [[ "${found_summary}" == false ]]; then
+            echo "## A148 public-web capture" >> "${GITHUB_STEP_SUMMARY}"
+            echo "No collection summary was generated." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload raw evidence and reconstructed data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a148-public-web-data-${{ github.run_id }}
+          path: |
+            ${{ env.DATA_DIR }}/a148_public_page_*.png
+            ${{ env.DATA_DIR }}/a148_public_route_snapshot_*.json
+            ${{ env.DATA_DIR }}/a148_public_vehicle_snapshots_*.jsonl
+            ${{ env.DATA_DIR }}/a148_raw_positions_*.csv
+            ${{ env.DATA_DIR }}/a148_collection_log_*.jsonl
+            ${{ env.DATA_DIR }}/a148_collection_summary_*.json
+            ${{ env.DATA_DIR }}/a148_collection_summary_*.md
+            ${{ env.DATA_DIR }}/a148_reconstructed_speed_profile_*.csv
+          if-no-files-found: error
+          retention-days: 90

@@ -1,3 +1,9 @@
 .api_key
 a148_raw_positions_*.csv
 a148_collection_log_*.jsonl
+a148_public_page_*.png
+a148_public_route_snapshot_*.json
+a148_public_vehicle_snapshots_*.jsonl
+a148_collection_summary_*.json
+a148_collection_summary_*.md
+a148_reconstructed_speed_profile_*.csv
