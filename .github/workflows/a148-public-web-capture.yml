@@ -12,7 +12,9 @@ on:
           - smoke_test
           - full_capture
   schedule:
-    - cron: "20 3 * * 1-5"
+    # Schedule well before the 03:30 first departure because GitHub-hosted
+    # schedules can start late during periods of high Actions load.
+    - cron: "30 1 * * 1-5"
       timezone: "Asia/Seoul"
 permissions:
   contents: read
@@ -24,7 +26,7 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 420
     env:
       TZ: Asia/Seoul
       CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
@@ -71,7 +73,7 @@ jobs:
         run: |
           node "${COLLECTOR}" \
             --interval 15 \
-            --duration-minutes 230 \
+            --duration-minutes 360 \
             --idle-stop-minutes 15 \
             --timeout 25 \
             --output-dir "${DATA_DIR}"
