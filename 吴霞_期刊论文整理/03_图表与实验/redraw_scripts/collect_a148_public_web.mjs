@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 const START_URL = "https://bus.go.kr/";
 const ROUTE_NUMBER = "A148";
 const EXPECTED_ROUTE_ID = "101000009";
+const START_SECTION_MAX = 2;
 const END_SECTION = 41;
 const DEFAULT_OUTPUT_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -184,6 +185,50 @@ function normalizeVehicle(record, receivedAt, responseTimestamp, routeId) {
   return Object.fromEntries(CSV_FIELDS.map((field) => [field, row[field] ?? ""]));
 }
 
+function observeVehicleCoverage(coverageByVehicle, rows, seenAtMs) {
+  for (const row of rows) {
+    const vehicleId = String(row.vehId || "").trim();
+    const section = Number(row.sectOrd);
+    if (!vehicleId || !Number.isFinite(section)) continue;
+    const coverage = coverageByVehicle.get(vehicleId) || {
+      minSection: section,
+      maxSection: section,
+      sampleCount: 0,
+      lastSeenAtMs: seenAtMs,
+    };
+    coverage.minSection = Math.min(coverage.minSection, section);
+    coverage.maxSection = Math.max(coverage.maxSection, section);
+    coverage.sampleCount += 1;
+    coverage.lastSeenAtMs = seenAtMs;
+    coverageByVehicle.set(vehicleId, coverage);
+  }
+}
+
+function findCompleteVehicle(coverageByVehicle) {
+  for (const [vehicleId, coverage] of coverageByVehicle) {
+    if (
+      coverage.minSection <= START_SECTION_MAX &&
+      coverage.maxSection >= END_SECTION - 1
+    ) {
+      return vehicleId;
+    }
+  }
+  return "";
+}
+
+function summarizeVehicleCoverage(coverageByVehicle) {
+  return Object.fromEntries(
+    [...coverageByVehicle.entries()].map(([vehicleId, coverage]) => [
+      vehicleId,
+      {
+        min_section: coverage.minSection,
+        max_section: coverage.maxSection,
+        samples_observed: coverage.sampleCount,
+      },
+    ]),
+  );
+}
+
 function parsePositionPayload(payload) {
   const response = payload?.ResponseVO;
   if (!response || Number(response.code) !== 0) {
@@ -312,7 +357,9 @@ async function writeSummary(paths, summary) {
     `- Requests / successful: ${summary.requests} / ${summary.successful_requests}`,
     `- Raw vehicle records / unique samples: ${summary.raw_vehicle_records} / ${summary.unique_samples}`,
     `- Static route points / stops: ${summary.route_path_points} / ${summary.route_stops}`,
-    `- Final section observed: ${summary.reached_final_section}`,
+    `- Start / final section observed: ${summary.reached_start_section} / ${summary.reached_final_section}`,
+    `- Complete vehicle trajectory: ${summary.complete_vehicle_id || "none"}`,
+    `- Per-vehicle section ranges: ${JSON.stringify(summary.vehicle_section_ranges)}`,
     `- Started / finished (Seoul): ${summary.started_at_seoul} / ${summary.finished_at_seoul}`,
     "- Source: Seoul public bus-information webpage; no account or API key used.",
     "- Privacy: no cookies, storage, headers, credentials, or HAR were retained.",
@@ -357,6 +404,25 @@ function runSelfTest() {
   ) {
     throw new Error("Self-test failed.");
   }
+  const coverage = new Map();
+  observeVehicleCoverage(coverage, [row], receivedAt.getTime());
+  observeVehicleCoverage(
+    coverage,
+    [{ ...row, sectOrd: END_SECTION - 1 }],
+    receivedAt.getTime() + 1000,
+  );
+  if (findCompleteVehicle(coverage) !== "test-vehicle") {
+    throw new Error("Coverage self-test failed.");
+  }
+  const partialCoverage = new Map();
+  observeVehicleCoverage(
+    partialCoverage,
+    [{ ...row, sectOrd: 15 }, { ...row, sectOrd: END_SECTION - 1 }],
+    receivedAt.getTime(),
+  );
+  if (findCompleteVehicle(partialCoverage) !== "") {
+    throw new Error("Partial-coverage self-test failed.");
+  }
   process.stdout.write("Collector self-test passed.\n");
 }
 
@@ -380,14 +446,17 @@ async function collect(args) {
     unique_samples: 0,
     route_path_points: 0,
     route_stops: 0,
+    reached_start_section: false,
     reached_final_section: false,
+    complete_vehicle_id: "",
+    vehicle_section_ranges: {},
   };
   let browser;
   let seenVehicle = false;
-  let reachedFinalSection = false;
-  let lastVehicleSeenAt = null;
+  let completeVehicleId = "";
   let routeSnapshotSaved = false;
   const uniqueSamples = new Set();
+  const coverageByVehicle = new Map();
 
   try {
     browser = await chromium.launch({ headless: true });
@@ -421,6 +490,7 @@ async function collect(args) {
       let status = "ok";
       let message = "";
       let vehicles = [];
+      let normalizedRows = [];
       let newRows = [];
       let responseTimestamp = "";
 
@@ -464,14 +534,15 @@ async function collect(args) {
           vehicles,
         });
 
-        newRows = vehicles
-          .map((vehicle) => normalizeVehicle(
+        normalizedRows = vehicles.map((vehicle) => normalizeVehicle(
             vehicle,
             receivedAt,
             responseTimestamp,
             EXPECTED_ROUTE_ID,
-          ))
-          .filter((row) => {
+          ));
+        observeVehicleCoverage(coverageByVehicle, normalizedRows, Date.now());
+        completeVehicleId ||= findCompleteVehicle(coverageByVehicle);
+        newRows = normalizedRows.filter((row) => {
             const identity = `${row.vehId}|${row.dataTm}`;
             if (uniqueSamples.has(identity)) return false;
             uniqueSamples.add(identity);
@@ -481,10 +552,6 @@ async function collect(args) {
 
         if (vehicles.length > 0) {
           seenVehicle = true;
-          lastVehicleSeenAt = Date.now();
-          reachedFinalSection ||= newRows.some(
-            (row) => Number(row.sectOrd) >= END_SECTION - 1,
-          );
         }
       } catch (error) {
         status = "request_error";
@@ -493,7 +560,14 @@ async function collect(args) {
       }
 
       summary.unique_samples = uniqueSamples.size;
-      summary.reached_final_section = reachedFinalSection;
+      summary.reached_start_section = [...coverageByVehicle.values()].some(
+        (coverage) => coverage.minSection <= START_SECTION_MAX,
+      );
+      summary.reached_final_section = [...coverageByVehicle.values()].some(
+        (coverage) => coverage.maxSection >= END_SECTION - 1,
+      );
+      summary.complete_vehicle_id = completeVehicleId;
+      summary.vehicle_section_ranges = summarizeVehicleCoverage(coverageByVehicle);
       await appendJsonLine(paths.log, {
         received_at_utc: receivedAt.toISOString(),
         received_at_seoul: seoulIso(receivedAt),
@@ -511,10 +585,9 @@ async function collect(args) {
 
       if (args.once) break;
       if (
-        seenVehicle &&
-        reachedFinalSection &&
-        lastVehicleSeenAt !== null &&
-        Date.now() - lastVehicleSeenAt >= args.idleStopMinutes * 60_000
+        completeVehicleId &&
+        Date.now() - coverageByVehicle.get(completeVehicleId).lastSeenAtMs >=
+          args.idleStopMinutes * 60_000
       ) {
         process.stdout.write("Round trip appears complete; stopping after the idle period.\n");
         break;
@@ -529,7 +602,7 @@ async function collect(args) {
         : "public_endpoint_failed"
       : !seenVehicle
         ? "no_a148_vehicle_observed"
-        : reachedFinalSection
+        : completeVehicleId
           ? "vehicle_trajectory_collected"
           : "partial_vehicle_trajectory";
   } catch (error) {
