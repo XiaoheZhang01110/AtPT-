@@ -234,12 +234,18 @@ def reconstruct(
     )
     frame.loc[frame["speed_outlier_flag"], "speed_raw_kmh"] = np.nan
     frame.loc[frame["stopFlag"].eq(1), "speed_raw_kmh"] = 0.0
+    invalid_interval = frame["gap_flag"] | frame["reverse_flag"]
+    frame.loc[invalid_interval, "speed_raw_kmh"] = np.nan
 
     frame["speed_reconstructed_kmh"] = hampel_replace(frame["speed_raw_kmh"])
     frame["speed_reconstructed_kmh"] = frame["speed_reconstructed_kmh"].interpolate(
         method="linear", limit=2, limit_area="inside"
     )
     frame.loc[frame["stopFlag"].eq(1), "speed_reconstructed_kmh"] = 0.0
+    # A row represents the interval ending at that timestamp.  Never invent an
+    # interval-average speed across a long API outage or a reversed section
+    # jump, even when the missing value is isolated between valid samples.
+    frame.loc[invalid_interval, "speed_reconstructed_kmh"] = np.nan
 
     # Keep cumulative distance auditable: invalid jumps and long gaps are not integrated.
     valid_step = frame["step_distance_m"].where(~frame["speed_outlier_flag"], 0.0).fillna(0.0)
@@ -371,13 +377,24 @@ def plot_profile(frame: pd.DataFrame, output_pdf: Path, vehicle_id: str) -> None
 
 
 def run_self_test() -> None:
-    timestamps = pd.date_range("2026-08-12 03:30:00", periods=8, freq="12s")
+    timestamps = pd.to_datetime(
+        [
+            "2026-08-12 03:30:00",
+            "2026-08-12 03:30:12",
+            "2026-08-12 03:30:24",
+            "2026-08-12 03:30:36",
+            "2026-08-12 03:32:36",
+            "2026-08-12 03:32:48",
+            "2026-08-12 03:33:00",
+            "2026-08-12 03:33:12",
+        ]
+    )
     raw = pd.DataFrame(
         {
             "dataTm": timestamps.strftime("%Y%m%d%H%M%S"),
             "vehId": ["test"] * 8,
             "sectOrd": [1, 2, 3, 20, 22, 23, 40, 41],
-            "stopFlag": [1, 0, 0, 0, 1, 0, 0, 1],
+            "stopFlag": [1, 0, 0, 0, 0, 0, 0, 1],
             "tmX": np.linspace(127.0730, 127.0800, 8),
             "tmY": np.linspace(37.6600, 37.6530, 8),
             "posX": [""] * 8,
@@ -390,6 +407,9 @@ def run_self_test() -> None:
     assert profile["cumulative_distance_raw_km"].is_monotonic_increasing
     assert diagnostics["outbound_complete"] == 1.0
     assert diagnostics["inbound_complete"] == 1.0
+    assert profile.loc[4, "gap_flag"]
+    assert pd.isna(profile.loc[4, "speed_raw_kmh"])
+    assert pd.isna(profile.loc[4, "speed_reconstructed_kmh"])
     test_pdf = Path(tempfile.gettempdir()) / "a148_speed_self_test.pdf"
     plot_profile(profile, test_pdf, vehicle)
     assert test_pdf.exists() and test_pdf.stat().st_size > 1000
