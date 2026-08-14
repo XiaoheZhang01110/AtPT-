@@ -22,6 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Reconstruct one complete HSL route 20 speed curve.")
     parser.add_argument("raw_positions", type=Path, nargs="?")
     parser.add_argument("shape", type=Path, nargs="?")
+    parser.add_argument("--stops", type=Path)
     parser.add_argument("--run-id", default="")
     parser.add_argument("--output-csv", type=Path)
     parser.add_argument("--output-summary", type=Path)
@@ -90,12 +91,18 @@ def choose_run(groups: dict[str, list[dict]], requested: str, route_length: floa
     return max(scores, key=scores.get)
 
 
-def reconstruct(raw_rows: list[dict], shape_rows: list[dict], requested_run: str = ""):
+def reconstruct(
+    raw_rows: list[dict],
+    shape_rows: list[dict],
+    requested_run: str = "",
+    stop_rows: list[dict] | None = None,
+):
     if len(shape_rows) < 2:
         raise ValueError("The route shape must contain at least two points")
     latitude_origin = sum(float(row["shape_pt_lat"]) for row in shape_rows) / len(shape_rows)
     shape, shape_distances = prepare_shape(shape_rows)
     route_length = shape_distances[-1]
+    stops = {row["stop_id"]: row for row in (stop_rows or [])}
 
     groups: dict[str, list[dict]] = defaultdict(list)
     for row in raw_rows:
@@ -107,6 +114,10 @@ def reconstruct(raw_rows: list[dict], shape_rows: list[dict], requested_run: str
             shape_distances,
         )
         enriched = dict(row)
+        stop = stops.get(row.get("stop_id", ""), {})
+        enriched["stop_sequence"] = stop.get("stop_sequence", "")
+        enriched["stop_name"] = stop.get("stop_name", "")
+        enriched["stop_shape_distance_km"] = stop.get("shape_dist_traveled_km", "")
         enriched["route_distance_km"] = position
         enriched["map_match_error_m"] = error
         groups[row["run_id"]].append(enriched)
@@ -220,7 +231,12 @@ def main() -> int:
         return 0
     if not args.raw_positions or not args.shape:
         raise SystemExit("raw_positions and shape are required unless --self-test is used")
-    rows, summary = reconstruct(read_csv(args.raw_positions), read_csv(args.shape), args.run_id)
+    rows, summary = reconstruct(
+        read_csv(args.raw_positions),
+        read_csv(args.shape),
+        args.run_id,
+        read_csv(args.stops) if args.stops else None,
+    )
     output_csv = args.output_csv or args.raw_positions.with_name(
         args.raw_positions.name.replace("_raw_positions.csv", "_speed_profile.csv")
     )

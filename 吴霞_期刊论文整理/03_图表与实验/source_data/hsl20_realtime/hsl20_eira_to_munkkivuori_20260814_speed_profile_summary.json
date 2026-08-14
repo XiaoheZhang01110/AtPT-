@@ -1,0 +1,21 @@
+{
+  "run_id": "20260814_171000_22-1257",
+  "vehicle_id": "22/1257",
+  "start_date": "20260814",
+  "start_time": "17:10:00",
+  "sample_count": 475,
+  "route_length_km": 11.029,
+  "minimum_route_distance_km": 0.021113245711128405,
+  "maximum_route_distance_km": 10.9783825291023,
+  "elapsed_minutes": 48.5,
+  "complete": true,
+  "mean_reported_speed_kmh": 13.532210553067292,
+  "mean_valid_position_speed_kmh": 13.081185320981852,
+  "maximum_map_match_error_m": 15.031086971962191,
+  "quality_flag_counts": {
+    "long_gap": 3,
+    "ok": 465,
+    "position_speed_outlier": 3,
+    "reverse_position_jump": 4
+  }
+}

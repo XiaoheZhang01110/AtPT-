@@ -80,6 +80,7 @@ jobs:
           python "${RECONSTRUCTOR}" \
             "${prefix}_raw_positions.csv" \
             "${prefix}_shape.csv" \
+            --stops "${prefix}_stops.csv" \
             --output-csv "${prefix}_speed_profile.csv" \
             --output-summary "${prefix}_speed_profile_summary.json"
 

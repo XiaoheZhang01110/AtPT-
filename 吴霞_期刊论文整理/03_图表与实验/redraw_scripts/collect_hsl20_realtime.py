@@ -28,6 +28,7 @@ DESTINATION = {
     "lon": 24.877250,
 }
 ORIGIN_RADIUS_M = 100.0
+DESTINATION_RADIUS_M = 75.0
 MIN_COMPLETE_DURATION_S = 15 * 60
 MIN_COMPLETE_SAMPLES = 60
 
@@ -150,6 +151,23 @@ def append_json_line(path: Path, value: dict) -> None:
         handle.write(json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
+def count_existing_requests(path: Path) -> tuple[int, int]:
+    total = 0
+    successful = 0
+    if not path.exists():
+        return total, successful
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            total += 1
+            try:
+                successful += json.loads(line).get("status") == "ok"
+            except json.JSONDecodeError:
+                continue
+    return total, successful
+
+
 def append_csv(path: Path, rows: list[dict]) -> None:
     if not rows:
         return
@@ -177,7 +195,7 @@ def load_existing_positions(path: Path) -> tuple[set[tuple[str, str]], dict, str
                 continue
             seen_samples.add(key)
             count += 1
-            if update_coverage(coverage, row):
+            if update_coverage(coverage, row) and not complete_run:
                 complete_run = row["run_id"]
     return seen_samples, coverage, complete_run, count
 
@@ -195,6 +213,7 @@ def update_coverage(coverage: dict, row: dict) -> bool:
             "stops_observed": set(),
             "origin_seen_epoch": None,
             "destination_seen_epoch": None,
+            "destination_stop_id_seen": False,
             "minimum_origin_distance_m": float("inf"),
             "minimum_destination_distance_m": float("inf"),
         },
@@ -218,10 +237,17 @@ def update_coverage(coverage: dict, row: dict) -> bool:
         state["origin_seen_epoch"] = timestamp
 
     elapsed = timestamp - state["origin_seen_epoch"] if state["origin_seen_epoch"] else 0
-    # Route 20 passes within about 200 m of its terminus before making the
-    # Munkkivuori loop.  Require the actual final stop ID so that this earlier
-    # pass cannot be mistaken for completion.
-    at_destination = row["stop_id"] == DESTINATION["stop_id"]
+    if row["stop_id"] == DESTINATION["stop_id"]:
+        state["destination_stop_id_seen"] = True
+
+    # Route 20 passes close to its terminus before making the Munkkivuori loop.
+    # HSL then announces the final stop while approaching it and may clear
+    # stop_id at physical arrival.  Require the ordered combination of a final
+    # stop announcement followed by entry into a small terminus radius.
+    at_destination = (
+        state["destination_stop_id_seen"]
+        and destination_distance <= DESTINATION_RADIUS_M
+    )
     if at_destination and state["origin_seen_epoch"] and elapsed >= MIN_COMPLETE_DURATION_S:
         state["destination_seen_epoch"] = timestamp
 
@@ -255,13 +281,21 @@ def write_summary(
     complete_run: str,
     coverage: dict,
 ) -> None:
+    first_observed = min(
+        (value["first_timestamp_utc"] for value in coverage.values()), default=None
+    )
+    last_observed = max(
+        (value["last_timestamp_utc"] for value in coverage.values()), default=None
+    )
     summary = {
         "source": FEED_URL,
         "route_id": ROUTE_ID,
         "direction_id": DIRECTION_ID,
         "direction": f"{ORIGIN['name']} -> {DESTINATION['name']}",
-        "started_at_utc": started_at.isoformat(),
-        "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+        "execution_started_at_utc": started_at.isoformat(),
+        "execution_finished_at_utc": datetime.now(timezone.utc).isoformat(),
+        "observed_first_vehicle_timestamp_utc": first_observed,
+        "observed_last_vehicle_timestamp_utc": last_observed,
         "request_count": request_count,
         "successful_requests": successful_requests,
         "existing_sample_count": existing_sample_count,
@@ -338,6 +372,7 @@ def main() -> int:
     seen_samples, coverage, complete_run, existing_sample_count = load_existing_positions(
         positions_path
     )
+    existing_request_count, existing_successful_requests = count_existing_requests(log_path)
     request_count = 0
     successful_requests = 0
     new_sample_count = 0
@@ -364,7 +399,7 @@ def main() -> int:
                         continue
                     seen_samples.add(key)
                     fresh_rows.append(row)
-                    if update_coverage(coverage, row):
+                    if update_coverage(coverage, row) and not complete_run:
                         complete_run = row["run_id"]
                 append_csv(positions_path, fresh_rows)
                 new_sample_count += len(fresh_rows)
@@ -420,8 +455,8 @@ def main() -> int:
             summary_json,
             summary_md,
             started_at=started_at,
-            request_count=request_count,
-            successful_requests=successful_requests,
+            request_count=existing_request_count + request_count,
+            successful_requests=existing_successful_requests + successful_requests,
             existing_sample_count=existing_sample_count,
             new_sample_count=new_sample_count,
             complete_run=complete_run,
