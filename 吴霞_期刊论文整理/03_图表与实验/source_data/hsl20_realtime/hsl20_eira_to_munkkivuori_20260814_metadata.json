@@ -1,0 +1,23 @@
+{
+  "source": "https://infopalvelut.storage.hsldev.com/gtfs/hsl.zip",
+  "service_date": "20260814",
+  "route_id": "1020",
+  "route_short_name": "20",
+  "route_long_name": "Eira-Kamppi-Munkkivuori",
+  "direction_id": 0,
+  "origin": {
+    "stop_id": "1060101",
+    "name": "Eira"
+  },
+  "destination": {
+    "stop_id": "1304161",
+    "name": "Munkkivuoren ostosk."
+  },
+  "stop_count": 25,
+  "shape_id": "1020_20260425_1",
+  "shape_point_count": 257,
+  "route_length_km": 11.029,
+  "scheduled_trip_count": 94,
+  "first_departure": "05:21:00",
+  "last_departure": "28:07:00"
+}
