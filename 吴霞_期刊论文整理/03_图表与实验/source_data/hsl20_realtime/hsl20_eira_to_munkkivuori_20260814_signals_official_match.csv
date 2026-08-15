@@ -1,0 +1,34 @@
+﻿osm_signal_index,osm_node_id,route_distance_km,osm_latitude,osm_longitude,official_feature_id,official_row_id,official_intersection_number,official_intersection_name,official_type,official_additional_information,official_data_owner,official_updated_at,official_latitude,official_longitude,match_distance_m,match_confidence,osm_locations_mapped_to_same_official_intersection
+1,25291571,0.9710356705680201,60.1635407,24.9381217,Liikennevalot_piste.277,277,127,Fredrikinkatu/Uudenmaankatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.1635428,24.93812824,0.43,high,1
+2,3228745570,1.0654590398899901,60.164236,24.9371559,Liikennevalot_piste.276,276,125,Bulevardi/Fredrikinkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.16432487,24.93703897,11.81,high,1
+3,3227213248,1.2021941466160566,60.1652405,24.9357393,Liikennevalot_piste.274,274,123,Lönnrotinkatu/Fredrikinkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.1653535,24.93561795,14.25,high,1
+4,3216453376,1.308999666337352,60.1660107,24.9346546,Liikennevalot_piste.269,269,121,Fredrikinkatu/Kalevankatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.1661343,24.93452744,15.44,high,1
+5,3216453387,1.384961098778019,60.1665653,24.9338873,Liikennevalot_piste.268,268,119,Fredrikinkatu/Eerikinkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.16667951,24.93376369,14.42,high,1
+6,3216400377,1.496780730828205,60.1673745,24.9327188,Liikennevalot_piste.267,267,117,Fredrikinkatu/Kansakoulukatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.16749319,24.93255973,15.86,high,1
+7,1037097298,1.874885096867559,60.1702256,24.9290502,Liikennevalot_piste.101,101,110,Fredrikinkatu/Eteläinen Rautatiekatu/Pohjoinen Rautatiekatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17004388,24.92905413,20.21,high,1
+8,333532261,2.156255665819937,60.1713383,24.9249186,Liikennevalot_piste.97,97,107,Runeberginkatu/Arkadiankatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.1713839,24.92437473,30.51,high,1
+9,333532701,2.288636146379397,60.1722099,24.9236055,Liikennevalot_piste.95,95,106,Runeberginkatu/Lutherinkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17225243,24.9235109,7.05,high,1
+10,333532695,2.388656187498317,60.1730412,24.9229724,Liikennevalot_piste.94,94,105,Runeberginkatu/Sammonkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17313556,24.92275738,15.86,high,1
+11,333533222,2.4947759538740186,60.1739597,24.9224551,Liikennevalot_piste.91,91,104,Runeberginkatu/Tunturikatu/Ilmarinkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17407949,24.92231947,15.29,high,1
+12,316007409,2.618377437445236,60.1750667,24.9221966,Liikennevalot_piste.88,88,103,Runeberginkatu/Caloniuksenkatu/Museokatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17525279,24.92193018,25.4,high,1
+13,60246609,2.721878388871198,60.1759768,24.922239,Liikennevalot_piste.87,87,102,Runeberginkatu/Eteläinen Hesperiankatu/Apollonkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17654861,24.92218971,63.64,medium,1
+14,309610745,2.8379063245788174,60.1770057,24.9224957,Liikennevalot_piste.83,83,101,Runeberginkatu/Pohjoinen Hesperiankatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17715408,24.92227841,20.41,high,1
+15,309602595,3.087926843328938,60.1791808,24.9232892,Liikennevalot_piste.82,82,99,Töölöntori,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17917767,24.92289523,21.79,high,2
+16,313928869,3.1315560498385437,60.1793917,24.9226265,Liikennevalot_piste.82,82,99,Töölöntori,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.17917767,24.92289523,28.06,high,2
+17,9207604723,3.3992148028187414,60.1815514,24.9203815,Liikennevalot_piste.85,85,42,Topeliuksenkatu/Sibeliuksenkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.18165123,24.92015152,16.88,high,1
+18,1415447979,3.8547531477585912,60.1851727,24.9165861,Liikennevalot_piste.59,59,40,Nordenskiöldin aukio,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.18523237,24.9163932,12.56,high,1
+19,3156992935,4.26012274896782,60.1883135,24.9128865,Liikennevalot_piste.60,60,37,Topeliuksenkatu/Stenbäckinkatu/Haartmaninkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.18845296,24.91271616,18.14,high,2
+20,1936079825,4.3934952220507615,60.1891591,24.9114319,Liikennevalot_piste.60,60,37,Topeliuksenkatu/Stenbäckinkatu/Haartmaninkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.18845296,24.91271616,105.86,review,2
+21,293874534,4.700173420543015,60.1909967,24.9072751,Liikennevalot_piste.61,61,35,Tukholmankatu/Haartmaninkatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19116297,24.90713675,20.01,high,1
+22,281675387,5.1026095831765135,60.1914288,24.9005795,Liikennevalot_piste.52,52,32,Paciuksenkatu/Tukholmankatu,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19131182,24.90013262,27.92,high,1
+23,6066518867,5.446906356301671,60.193114,24.895426,Liikennevalot_piste.51,51,31,Paciuksenkatu/Meilahdentie,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19311319,24.89495823,25.86,high,1
+24,269688438,5.716080090539616,60.1946635,24.8917267,Liikennevalot_piste.50,50,17,Paciuksenkatu/Paciuksenkaari,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.1947066,24.89128674,24.78,high,1
+25,314207312,6.131362789094338,60.1964673,24.8851987,Liikennevalot_piste.48,48,30,Munkkiniemen aukio,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19644223,24.8847713,23.79,high,1
+26,5607320743,6.283718699433416,60.1976768,24.8844531,Liikennevalot_piste.46,46,29,Huopalahdentie/Perustie,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19794869,24.88422151,32.83,high,1
+27,1020312099,6.4898988043815615,60.1994738,24.8835237,Liikennevalot_piste.47,47,28,Huopalahdentie/Lokkalantie (suojatie),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.19953605,24.88343628,8.44,high,1
+28,1020312093,6.717511672498021,60.2014465,24.8824539,Liikennevalot_piste.45,45,27,Huopalahdentie/Tietokuja,Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20157271,24.88225425,17.85,high,1
+29,265941952,6.850312518453833,60.2025717,24.881628,Liikennevalot_piste.44,44,26,Huopalahdentie/Turunväylä (tuloramppi),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20243769,24.88167725,15.15,high,1
+30,265941944,6.968390574182519,60.2036171,24.8812656,Liikennevalot_piste.41,41,25,Huopalahdentie/Turunväylä (menoramppi),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20369214,24.88110021,12.37,high,1
+31,288692830,7.166379473621824,60.2053319,24.8803383,Liikennevalot_piste.40,40,24,Huopalahdentie/Ulvilantie (eteläinen),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20510307,24.88066002,31.04,high,1
+32,288691821,7.339964765686625,60.2065465,24.8793904,Liikennevalot_piste.31,31,23,Huopalahdentie/Lapinmäentie/Ulvilantie (pohjoinen),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20661869,24.87987629,28.02,high,1
+33,1396381689,10.277000017409636,60.2037811,24.8726128,Liikennevalot_piste.42,42,15,Ulvilantie/Professorintie (suojatie),Liikennevalot,,Helsinki/MAKA,2026-08-14,60.20384199,24.87263783,6.91,high,1

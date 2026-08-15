@@ -1,0 +1,16 @@
+{
+  "prepared_at_utc": "2026-08-15T02:13:25.466202+00:00",
+  "route": "HSL 20 Eira -> Munkkivuori",
+  "gtfs_shape_points": 257,
+  "route_length_km": 11.029,
+  "elevation_source": "https://api.open-meteo.com/v1/elevation",
+  "elevation_samples": 257,
+  "elevation_min_m": 0.0,
+  "elevation_max_m": 28.0,
+  "osm_source": "OpenStreetMap contributors",
+  "osm_license": "ODbL",
+  "overpass_endpoint": "https://overpass-api.de/api/interpreter",
+  "osm_signal_nodes_in_query_bbox": 784,
+  "route_signal_candidates_after_50m_filter_and_75m_clustering": 33,
+  "signal_matching_note": "OSM traffic-signal nodes within 50 m of the HSL GTFS shape; adjacent nodes within 75 m along the route are represented by the closest node."
+}

@@ -1,0 +1,18 @@
+{
+  "matched_at_utc": "2026-08-15T02:36:44.077894+00:00",
+  "source": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs",
+  "layer": "avoindata:Liikennevalot_piste",
+  "source_license": "CC BY 4.0",
+  "official_features_downloaded": 557,
+  "osm_signal_locations": 33,
+  "matched_osm_signal_locations": 33,
+  "unique_official_intersections": 31,
+  "match_confidence_counts": {
+    "high": 31,
+    "medium": 1,
+    "review": 1
+  },
+  "maximum_accepted_match_distance_m": 150.0,
+  "maximum_observed_match_distance_m": 105.86,
+  "note": "Multiple OSM signal locations can map to one official intersection. The official WFS exposes identifiers and names but no signal timing plans."
+}
