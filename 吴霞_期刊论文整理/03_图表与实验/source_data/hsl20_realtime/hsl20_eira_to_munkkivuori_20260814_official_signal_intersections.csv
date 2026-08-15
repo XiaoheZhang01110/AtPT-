@@ -1,0 +1,32 @@
+﻿route_signal_sequence,official_feature_id,official_intersection_number,official_intersection_name,official_type,route_distance_km,official_latitude,official_longitude,osm_signal_indices,osm_locations_in_group,minimum_match_distance_m,worst_match_confidence
+1,Liikennevalot_piste.277,127,Fredrikinkatu/Uudenmaankatu,Liikennevalot,0.9710356705680201,60.1635428,24.93812824,1,1,0.43,high
+2,Liikennevalot_piste.276,125,Bulevardi/Fredrikinkatu,Liikennevalot,1.0654590398899901,60.16432487,24.93703897,2,1,11.81,high
+3,Liikennevalot_piste.274,123,Lönnrotinkatu/Fredrikinkatu,Liikennevalot,1.2021941466160566,60.1653535,24.93561795,3,1,14.25,high
+4,Liikennevalot_piste.269,121,Fredrikinkatu/Kalevankatu,Liikennevalot,1.308999666337352,60.1661343,24.93452744,4,1,15.44,high
+5,Liikennevalot_piste.268,119,Fredrikinkatu/Eerikinkatu,Liikennevalot,1.384961098778019,60.16667951,24.93376369,5,1,14.42,high
+6,Liikennevalot_piste.267,117,Fredrikinkatu/Kansakoulukatu,Liikennevalot,1.496780730828205,60.16749319,24.93255973,6,1,15.86,high
+7,Liikennevalot_piste.101,110,Fredrikinkatu/Eteläinen Rautatiekatu/Pohjoinen Rautatiekatu,Liikennevalot,1.874885096867559,60.17004388,24.92905413,7,1,20.21,high
+8,Liikennevalot_piste.97,107,Runeberginkatu/Arkadiankatu,Liikennevalot,2.156255665819937,60.1713839,24.92437473,8,1,30.51,high
+9,Liikennevalot_piste.95,106,Runeberginkatu/Lutherinkatu,Liikennevalot,2.288636146379397,60.17225243,24.9235109,9,1,7.05,high
+10,Liikennevalot_piste.94,105,Runeberginkatu/Sammonkatu,Liikennevalot,2.388656187498317,60.17313556,24.92275738,10,1,15.86,high
+11,Liikennevalot_piste.91,104,Runeberginkatu/Tunturikatu/Ilmarinkatu,Liikennevalot,2.4947759538740186,60.17407949,24.92231947,11,1,15.29,high
+12,Liikennevalot_piste.88,103,Runeberginkatu/Caloniuksenkatu/Museokatu,Liikennevalot,2.618377437445236,60.17525279,24.92193018,12,1,25.4,high
+13,Liikennevalot_piste.87,102,Runeberginkatu/Eteläinen Hesperiankatu/Apollonkatu,Liikennevalot,2.721878388871198,60.17654861,24.92218971,13,1,63.64,medium
+14,Liikennevalot_piste.83,101,Runeberginkatu/Pohjoinen Hesperiankatu,Liikennevalot,2.8379063245788174,60.17715408,24.92227841,14,1,20.41,high
+15,Liikennevalot_piste.82,99,Töölöntori,Liikennevalot,3.087926843328938,60.17917767,24.92289523,15;16,2,21.79,high
+16,Liikennevalot_piste.85,42,Topeliuksenkatu/Sibeliuksenkatu,Liikennevalot,3.3992148028187414,60.18165123,24.92015152,17,1,16.88,high
+17,Liikennevalot_piste.59,40,Nordenskiöldin aukio,Liikennevalot,3.8547531477585912,60.18523237,24.9163932,18,1,12.56,high
+18,Liikennevalot_piste.60,37,Topeliuksenkatu/Stenbäckinkatu/Haartmaninkatu,Liikennevalot,4.26012274896782,60.18845296,24.91271616,19;20,2,18.14,review
+19,Liikennevalot_piste.61,35,Tukholmankatu/Haartmaninkatu,Liikennevalot,4.700173420543015,60.19116297,24.90713675,21,1,20.01,high
+20,Liikennevalot_piste.52,32,Paciuksenkatu/Tukholmankatu,Liikennevalot,5.1026095831765135,60.19131182,24.90013262,22,1,27.92,high
+21,Liikennevalot_piste.51,31,Paciuksenkatu/Meilahdentie,Liikennevalot,5.446906356301671,60.19311319,24.89495823,23,1,25.86,high
+22,Liikennevalot_piste.50,17,Paciuksenkatu/Paciuksenkaari,Liikennevalot,5.716080090539616,60.1947066,24.89128674,24,1,24.78,high
+23,Liikennevalot_piste.48,30,Munkkiniemen aukio,Liikennevalot,6.131362789094338,60.19644223,24.8847713,25,1,23.79,high
+24,Liikennevalot_piste.46,29,Huopalahdentie/Perustie,Liikennevalot,6.283718699433416,60.19794869,24.88422151,26,1,32.83,high
+25,Liikennevalot_piste.47,28,Huopalahdentie/Lokkalantie (suojatie),Liikennevalot,6.4898988043815615,60.19953605,24.88343628,27,1,8.44,high
+26,Liikennevalot_piste.45,27,Huopalahdentie/Tietokuja,Liikennevalot,6.717511672498021,60.20157271,24.88225425,28,1,17.85,high
+27,Liikennevalot_piste.44,26,Huopalahdentie/Turunväylä (tuloramppi),Liikennevalot,6.850312518453833,60.20243769,24.88167725,29,1,15.15,high
+28,Liikennevalot_piste.41,25,Huopalahdentie/Turunväylä (menoramppi),Liikennevalot,6.968390574182519,60.20369214,24.88110021,30,1,12.37,high
+29,Liikennevalot_piste.40,24,Huopalahdentie/Ulvilantie (eteläinen),Liikennevalot,7.166379473621824,60.20510307,24.88066002,31,1,31.04,high
+30,Liikennevalot_piste.31,23,Huopalahdentie/Lapinmäentie/Ulvilantie (pohjoinen),Liikennevalot,7.339964765686625,60.20661869,24.87987629,32,1,28.02,high
+31,Liikennevalot_piste.42,15,Ulvilantie/Professorintie (suojatie),Liikennevalot,10.277000017409636,60.20384199,24.87263783,33,1,6.91,high

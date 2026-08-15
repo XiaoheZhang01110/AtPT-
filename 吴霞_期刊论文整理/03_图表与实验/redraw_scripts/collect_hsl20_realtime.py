@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect one complete Eira-to-Munkkivuori run of HSL bus route 20."""
+"""Collect one or more complete Eira-to-Munkkivuori runs of HSL bus route 20."""
 
 from __future__ import annotations
 
@@ -69,6 +69,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duration-minutes", type=float, default=90.0)
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument(
+        "--target-complete-runs",
+        type=int,
+        default=1,
+        help="Stop after this many complete single-direction runs have been observed.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=root / "03_图表与实验" / "source_data" / "hsl20_realtime",
@@ -78,8 +84,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if not args.once and args.interval < 2:
         parser.error("--interval must be at least 2 seconds")
-    if args.duration_minutes <= 0 or args.timeout <= 0:
-        parser.error("duration and timeout must be positive")
+    if args.duration_minutes <= 0 or args.timeout <= 0 or args.target_complete_runs <= 0:
+        parser.error("duration, timeout, and target-complete-runs must be positive")
     return args
 
 
@@ -179,13 +185,13 @@ def append_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows({name: row.get(name, "") for name in CSV_FIELDS} for row in rows)
 
 
-def load_existing_positions(path: Path) -> tuple[set[tuple[str, str]], dict, str, int]:
+def load_existing_positions(path: Path) -> tuple[set[tuple[str, str]], dict, set[str], int]:
     seen_samples: set[tuple[str, str]] = set()
     coverage: dict = {}
-    complete_run = ""
+    complete_runs: set[str] = set()
     count = 0
     if not path.exists() or path.stat().st_size == 0:
-        return seen_samples, coverage, complete_run, count
+        return seen_samples, coverage, complete_runs, count
     with path.open(encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
             row["latitude"] = float(row["latitude"])
@@ -195,9 +201,9 @@ def load_existing_positions(path: Path) -> tuple[set[tuple[str, str]], dict, str
                 continue
             seen_samples.add(key)
             count += 1
-            if update_coverage(coverage, row) and not complete_run:
-                complete_run = row["run_id"]
-    return seen_samples, coverage, complete_run, count
+            if update_coverage(coverage, row):
+                complete_runs.add(row["run_id"])
+    return seen_samples, coverage, complete_runs, count
 
 
 def update_coverage(coverage: dict, row: dict) -> bool:
@@ -278,7 +284,8 @@ def write_summary(
     successful_requests: int,
     existing_sample_count: int,
     new_sample_count: int,
-    complete_run: str,
+    complete_runs: set[str],
+    target_complete_runs: int,
     coverage: dict,
 ) -> None:
     first_observed = min(
@@ -286,6 +293,14 @@ def write_summary(
     )
     last_observed = max(
         (value["last_timestamp_utc"] for value in coverage.values()), default=None
+    )
+    ordered_complete_runs = sorted(
+        complete_runs,
+        key=lambda run: (
+            coverage.get(run, {}).get("start_date", ""),
+            coverage.get(run, {}).get("start_time", ""),
+            run,
+        ),
     )
     summary = {
         "source": FEED_URL,
@@ -301,8 +316,12 @@ def write_summary(
         "existing_sample_count": existing_sample_count,
         "new_sample_count": new_sample_count,
         "total_position_samples": existing_sample_count + new_sample_count,
-        "complete_run_id": complete_run or None,
-        "complete": bool(complete_run),
+        "target_complete_runs": target_complete_runs,
+        "complete_run_id": ordered_complete_runs[0] if ordered_complete_runs else None,
+        "complete_run_ids": ordered_complete_runs,
+        "complete_run_count": len(ordered_complete_runs),
+        "target_reached": len(ordered_complete_runs) >= target_complete_runs,
+        "complete": bool(ordered_complete_runs),
         "runs": serializable_coverage(coverage),
         "speed_note": (
             "speed_reported_kmh is supplied by HSL GTFS-RT; position-derived interval speed "
@@ -318,7 +337,12 @@ def write_summary(
         f"- Existing position samples resumed: {existing_sample_count}",
         f"- New position samples: {new_sample_count}",
         f"- Observed runs: {len(coverage)}",
-        f"- Complete run: `{complete_run}`" if complete_run else "- Complete run: not yet observed",
+        f"- Complete runs: {len(ordered_complete_runs)} / {target_complete_runs}",
+        (
+            "- Complete run IDs: " + ", ".join(f"`{run}`" for run in ordered_complete_runs)
+            if ordered_complete_runs
+            else "- Complete run IDs: not yet observed"
+        ),
         "- API key required: no",
         "",
     ]
@@ -334,21 +358,26 @@ def request_feed(timeout: float) -> bytes:
 def self_test() -> None:
     assert round(haversine_m(ORIGIN["lat"], ORIGIN["lon"], ORIGIN["lat"], ORIGIN["lon"]), 6) == 0
     coverage: dict = {}
+    completed: set[str] = set()
     base = 1_786_700_000
-    origin_row = {
-        "run_id": "test", "vehicle_id": "22/test", "start_date": "20260814",
-        "start_time": "08:00:00", "vehicle_timestamp_utc": utc_iso(base),
-        "latitude": ORIGIN["lat"], "longitude": ORIGIN["lon"], "stop_id": ORIGIN["stop_id"],
-    }
-    assert not update_coverage(coverage, origin_row)
-    coverage["test"]["sample_count"] = MIN_COMPLETE_SAMPLES
-    destination_row = dict(origin_row)
-    destination_row.update(
-        {"vehicle_timestamp_utc": utc_iso(base + MIN_COMPLETE_DURATION_S),
-         "latitude": DESTINATION["lat"], "longitude": DESTINATION["lon"],
-         "stop_id": DESTINATION["stop_id"]}
-    )
-    assert update_coverage(coverage, destination_row)
+    for index in range(3):
+        run = f"test-{index + 1}"
+        origin_row = {
+            "run_id": run, "vehicle_id": f"22/{index + 1}", "start_date": "20260814",
+            "start_time": f"08:{index * 10:02d}:00", "vehicle_timestamp_utc": utc_iso(base),
+            "latitude": ORIGIN["lat"], "longitude": ORIGIN["lon"], "stop_id": ORIGIN["stop_id"],
+        }
+        assert not update_coverage(coverage, origin_row)
+        coverage[run]["sample_count"] = MIN_COMPLETE_SAMPLES
+        destination_row = dict(origin_row)
+        destination_row.update(
+            {"vehicle_timestamp_utc": utc_iso(base + MIN_COMPLETE_DURATION_S),
+             "latitude": DESTINATION["lat"], "longitude": DESTINATION["lon"],
+             "stop_id": DESTINATION["stop_id"]}
+        )
+        if update_coverage(coverage, destination_row):
+            completed.add(run)
+    assert len(completed) == 3
     print("HSL 20 realtime collector self-test passed.")
 
 
@@ -369,7 +398,7 @@ def main() -> int:
     summary_json = args.output_dir / f"{prefix}_collection_summary.json"
     summary_md = args.output_dir / f"{prefix}_collection_summary.md"
 
-    seen_samples, coverage, complete_run, existing_sample_count = load_existing_positions(
+    seen_samples, coverage, complete_runs, existing_sample_count = load_existing_positions(
         positions_path
     )
     existing_request_count, existing_successful_requests = count_existing_requests(log_path)
@@ -399,8 +428,8 @@ def main() -> int:
                         continue
                     seen_samples.add(key)
                     fresh_rows.append(row)
-                    if update_coverage(coverage, row) and not complete_run:
-                        complete_run = row["run_id"]
+                    if update_coverage(coverage, row):
+                        complete_runs.add(row["run_id"])
                 append_csv(positions_path, fresh_rows)
                 new_sample_count += len(fresh_rows)
                 append_json_line(
@@ -421,13 +450,14 @@ def main() -> int:
                         "status": "ok",
                         "vehicles": len(rows),
                         "new_samples": len(fresh_rows),
-                        "complete_run_id": complete_run or None,
+                        "complete_run_ids": sorted(complete_runs),
+                        "complete_run_count": len(complete_runs),
                     },
                 )
                 print(
                     f"{received_at.isoformat()} request={request_count} "
                     f"vehicles={len(rows)} new_samples={len(fresh_rows)} "
-                    f"complete_run={complete_run or '-'}",
+                    f"complete_runs={len(complete_runs)}/{args.target_complete_runs}",
                     flush=True,
                 )
             except Exception as error:  # retain an auditable log and tolerate brief outages
@@ -446,7 +476,11 @@ def main() -> int:
                 if args.once or consecutive_errors >= 10:
                     break
 
-            if args.once or complete_run or time.monotonic() >= deadline:
+            if (
+                args.once
+                or len(complete_runs) >= args.target_complete_runs
+                or time.monotonic() >= deadline
+            ):
                 break
             elapsed = time.monotonic() - request_started
             time.sleep(max(0.0, args.interval - elapsed))
@@ -459,7 +493,8 @@ def main() -> int:
             successful_requests=existing_successful_requests + successful_requests,
             existing_sample_count=existing_sample_count,
             new_sample_count=new_sample_count,
-            complete_run=complete_run,
+            complete_runs=complete_runs,
+            target_complete_runs=args.target_complete_runs,
             coverage=coverage,
         )
 
@@ -467,7 +502,7 @@ def main() -> int:
         return 3
     if args.once:
         return 0
-    return 0 if complete_run else 2
+    return 0 if len(complete_runs) >= args.target_complete_runs else 2
 
 
 if __name__ == "__main__":

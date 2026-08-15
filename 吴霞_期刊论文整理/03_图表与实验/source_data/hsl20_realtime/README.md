@@ -15,6 +15,25 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 
 截至2026-08-14的GTFS核验结果为：单向约11.029 km，共25个站点，计划单程约33–44分钟，具体运行时间随班次而变化。
 
+## 沿线高程与信号节点
+
+用于线路—高程图的补充数据于2026-08-15整理：
+
+- 高程源：Open-Meteo Elevation API，对官方GTFS线形的257个点逐点采样；
+- 高程范围：0–28 m；
+- 信号节点源：OpenStreetMap `highway=traffic_signals`；
+- 匹配方法：保留距GTFS线形50 m以内的OSM节点，并将沿线里程相距75 m以内的相邻信号节点聚类；
+- 聚类后得到33处沿线信号位置。
+
+33处OSM位置已进一步与赫尔辛基官方WFS图层`Liikennevalot_piste`匹配：
+
+- 33/33处均获得官方交叉口编号和名称；
+- 对应31个不同的官方交叉口，因为两组相邻OSM位置分别属于同一官方交叉口；
+- 31处为高置信匹配（距离不超过35 m），1处为中置信，1处需要人工复核；
+- 官方WFS提供交叉口编号、名称、类型、位置和更新时间，不提供周期或相位配时。
+
+高程属于公开DEM派生数据，不是实地测量值。OSM中一个交叉口可能包含多个信号灯节点，因此论文图中使用聚类后的运营位置，不将其解释为信号灯硬件数量。
+
 ## 已完成的实测单程
 
 2026-08-14已完成一条可审计的单向轨迹：
@@ -49,6 +68,13 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 - `_collection_summary.json/.md`：完整性和覆盖范围摘要；
 - `_speed_profile.csv`：完整单程的地图匹配与速度重建结果；
 - `_speed_profile_summary.json`：速度曲线质量摘要。
+- `_elevation.csv`：257个GTFS线形点对应的公开DEM高程；
+- `_osm_signals.csv`：路线走廊内经匹配和聚类的OSM信号节点；
+- `_route_context_metadata.json`：高程与信号节点的数据源、数量和匹配参数。
+- `_helsinki_official_signals.geojson`：匹配日下载的赫尔辛基官方交通信号WFS快照；
+- `_signals_official_match.csv`：33处OSM位置到官方编号和交叉口名称的逐点匹配表；
+- `_official_signal_intersections.csv`：按线路里程排序的31个去重官方交叉口；
+- `_signals_official_match_summary.json`：匹配数量、距离和置信等级摘要。
 
 ## 完整单程判定
 
@@ -75,7 +101,9 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 工作流为`.github/workflows/hsl20-single-direction-capture.yml`，显示名称为`HSL 20 single-direction speed capture`。
 
 - 手动运行默认选择`smoke_test`，只请求一次；
-- 选择`full_capture`后，最多运行90分钟，并在获得第一条完整单程后提前结束；
+- 选择`full_capture`后，最多连续采集120分钟，目标是获得3条完整单程；
+- 采集器保留同一时段的全部方向0车辆，达到3条完整运行后提前结束；
+- 重建器同时输出`_speed_profiles.csv`和`_speed_profiles_summary.json`，每条记录包含`profile_index`和`run_id`；
 - 工作日自动任务在UTC 04:30启动，即芬兰冬季06:30、夏季07:30；
 - 完成后在该次Actions运行页面的`Artifacts`区域下载`hsl20-single-direction-data-*`；
 - 不需要创建任何GitHub Secret。

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       capture_mode:
-        description: Choose a connectivity test or one complete Eira-to-Munkkivuori run
+        description: Choose a connectivity test or three complete Eira-to-Munkkivuori runs
         required: true
         type: choice
         default: smoke_test
@@ -25,13 +25,14 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     env:
       TZ: Europe/Helsinki
       CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
       STATIC_EXTRACTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/prepare_hsl20_static.py
       COLLECTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/collect_hsl20_realtime.py
       RECONSTRUCTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_hsl20_speed.py
+      SIGNAL_MATCHER: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/match_hsl20_official_signals.py
       REQUIREMENTS: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/requirements_hsl20.txt
       DATA_DIR: 吴霞_期刊论文整理/03_图表与实验/source_data/hsl20_realtime
 
@@ -54,6 +55,7 @@ jobs:
           python "${STATIC_EXTRACTOR}" --self-test
           python "${COLLECTOR}" --self-test
           python "${RECONSTRUCTOR}" --self-test
+          python "${SIGNAL_MATCHER}" --self-test
 
       - name: Extract the current one-direction route, stops, shape, and timetable
         run: python "${STATIC_EXTRACTOR}" --output-dir "${DATA_DIR}"
@@ -62,27 +64,36 @@ jobs:
         if: ${{ env.CAPTURE_MODE == 'smoke_test' }}
         run: python "${COLLECTOR}" --once --timeout 20 --output-dir "${DATA_DIR}"
 
-      - name: Capture one complete Eira-to-Munkkivuori run
+      - name: Capture three complete Eira-to-Munkkivuori runs
         if: ${{ env.CAPTURE_MODE == 'full_capture' }}
+        continue-on-error: true
         run: |
           python "${COLLECTOR}" \
             --interval 5 \
-            --duration-minutes 90 \
+            --duration-minutes 120 \
             --timeout 20 \
+            --target-complete-runs 3 \
             --output-dir "${DATA_DIR}"
 
-      - name: Reconstruct the complete single-direction speed profile
-        if: ${{ env.CAPTURE_MODE == 'full_capture' }}
+      - name: Reconstruct all complete single-direction speed profiles
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
         shell: bash
         run: |
           service_day="$(date +%Y%m%d)"
           prefix="${DATA_DIR}/hsl20_eira_to_munkkivuori_${service_day}"
-          python "${RECONSTRUCTOR}" \
-            "${prefix}_raw_positions.csv" \
-            "${prefix}_shape.csv" \
-            --stops "${prefix}_stops.csv" \
-            --output-csv "${prefix}_speed_profile.csv" \
-            --output-summary "${prefix}_speed_profile_summary.json"
+          complete_count="$(python -c 'import json,sys; d=json.load(open(sys.argv[1])); print(len(d.get("complete_run_ids") or ([d["complete_run_id"]] if d.get("complete_run_id") else [])))' "${prefix}_collection_summary.json")"
+          if [[ "${complete_count}" -gt 0 ]]; then
+            python "${RECONSTRUCTOR}" \
+              "${prefix}_raw_positions.csv" \
+              "${prefix}_shape.csv" \
+              --stops "${prefix}_stops.csv" \
+              --all-complete \
+              --collection-summary "${prefix}_collection_summary.json" \
+              --output-csv "${prefix}_speed_profiles.csv" \
+              --output-summary "${prefix}_speed_profiles_summary.json"
+          else
+            echo "No complete run was observed; raw evidence is retained without a speed profile."
+          fi
 
       - name: Publish collection summary
         if: always()
@@ -118,5 +129,19 @@ jobs:
             ${{ env.DATA_DIR }}/hsl20_*_collection_summary.md
             ${{ env.DATA_DIR }}/hsl20_*_speed_profile.csv
             ${{ env.DATA_DIR }}/hsl20_*_speed_profile_summary.json
+            ${{ env.DATA_DIR }}/hsl20_*_speed_profiles.csv
+            ${{ env.DATA_DIR }}/hsl20_*_speed_profiles_summary.json
+            ${{ env.DATA_DIR }}/hsl20_*_official_signal_intersections.csv
+            ${{ env.DATA_DIR }}/hsl20_*_signals_official_match.csv
+            ${{ env.DATA_DIR }}/hsl20_*_signals_official_match_summary.json
+            ${{ env.DATA_DIR }}/hsl20_*_helsinki_official_signals.geojson
           if-no-files-found: error
           retention-days: 90
+
+      - name: Verify the three-run capture target
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
+        shell: bash
+        run: |
+          service_day="$(date +%Y%m%d)"
+          summary="${DATA_DIR}/hsl20_eira_to_munkkivuori_${service_day}_collection_summary.json"
+          python -c 'import json,sys; d=json.load(open(sys.argv[1])); n=len(d.get("complete_run_ids") or ([d["complete_run_id"]] if d.get("complete_run_id") else [])); print(f"complete_runs={n}/3"); raise SystemExit(0 if n >= 3 else 2)' "${summary}"

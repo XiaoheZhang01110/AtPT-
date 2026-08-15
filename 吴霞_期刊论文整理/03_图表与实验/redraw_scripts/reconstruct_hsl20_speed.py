@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Map-match and reconstruct one HSL 20 Eira-to-Munkkivuori speed profile."""
+"""Map-match and reconstruct one or more HSL 20 speed profiles."""
 
 from __future__ import annotations
 
@@ -24,6 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("shape", type=Path, nargs="?")
     parser.add_argument("--stops", type=Path)
     parser.add_argument("--run-id", default="")
+    parser.add_argument(
+        "--all-complete",
+        action="store_true",
+        help="Reconstruct every complete run listed in --collection-summary.",
+    )
+    parser.add_argument("--collection-summary", type=Path)
     parser.add_argument("--output-csv", type=Path)
     parser.add_argument("--output-summary", type=Path)
     parser.add_argument("--require-complete", action=argparse.BooleanOptionalAction, default=True)
@@ -213,6 +219,41 @@ def write_outputs(rows: list[dict], summary: dict, output_csv: Path, output_summ
     output_summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def complete_run_ids(summary_path: Path) -> list[str]:
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    run_ids = payload.get("complete_run_ids") or []
+    if not run_ids and payload.get("complete_run_id"):
+        run_ids = [payload["complete_run_id"]]
+    run_ids = list(dict.fromkeys(str(run_id) for run_id in run_ids if run_id))
+    if not run_ids:
+        raise ValueError("The collection summary does not contain any complete run IDs")
+    return run_ids
+
+
+def reconstruct_complete_runs(
+    raw_rows: list[dict],
+    shape_rows: list[dict],
+    stop_rows: list[dict] | None,
+    run_ids: list[str],
+) -> tuple[list[dict], dict]:
+    combined_rows: list[dict] = []
+    summaries: list[dict] = []
+    for profile_index, run_id in enumerate(run_ids, start=1):
+        rows, summary = reconstruct(raw_rows, shape_rows, run_id, stop_rows)
+        for row in rows:
+            row["profile_index"] = profile_index
+        combined_rows.extend(rows)
+        summaries.append(summary)
+    aggregate = {
+        "run_count": len(summaries),
+        "all_complete": all(summary["complete"] for summary in summaries),
+        "total_samples": len(combined_rows),
+        "run_ids": [summary["run_id"] for summary in summaries],
+        "runs": summaries,
+    }
+    return combined_rows, aggregate
+
+
 def self_test() -> None:
     shape = [
         {"shape_pt_sequence": "1", "shape_pt_lat": "60.0", "shape_pt_lon": "24.0", "shape_dist_traveled_km": "0"},
@@ -221,6 +262,39 @@ def self_test() -> None:
     points, distances = prepare_shape(shape)
     position, error = nearest_route_position(points[1], points, distances)
     assert abs(position - 0.556) < 1e-6 and error < 1e-6
+    raw_rows = []
+    for run_index in range(3):
+        run_id = f"test-{run_index + 1}"
+        for sample_index, (longitude, seconds) in enumerate(
+            [(24.0, 0), (24.005, 450), (24.01, 900)]
+        ):
+            raw_rows.append(
+                {
+                    "route_id": "1020",
+                    "direction_id": "0",
+                    "run_id": run_id,
+                    "vehicle_id": f"22/{run_index + 1}",
+                    "start_date": "20260814",
+                    "start_time": f"08:{run_index * 10:02d}:00",
+                    "vehicle_timestamp_utc": datetime.fromtimestamp(
+                        1_786_700_000 + seconds
+                    ).astimezone().isoformat(),
+                    "latitude": "60.0",
+                    "longitude": str(longitude),
+                    "stop_id": "",
+                    "speed_reported_kmh": "10.0",
+                    "sample_index": str(sample_index),
+                }
+            )
+    combined, aggregate = reconstruct_complete_runs(
+        raw_rows,
+        shape,
+        None,
+        ["test-1", "test-2", "test-3"],
+    )
+    assert aggregate["run_count"] == 3
+    assert aggregate["all_complete"]
+    assert len(combined) == 9
     print("HSL 20 speed reconstruction self-test passed.")
 
 
@@ -231,19 +305,31 @@ def main() -> int:
         return 0
     if not args.raw_positions or not args.shape:
         raise SystemExit("raw_positions and shape are required unless --self-test is used")
-    rows, summary = reconstruct(
-        read_csv(args.raw_positions),
-        read_csv(args.shape),
-        args.run_id,
-        read_csv(args.stops) if args.stops else None,
-    )
+    raw_rows = read_csv(args.raw_positions)
+    shape_rows = read_csv(args.shape)
+    stop_rows = read_csv(args.stops) if args.stops else None
+    if args.all_complete:
+        if not args.collection_summary:
+            raise SystemExit("--collection-summary is required with --all-complete")
+        rows, summary = reconstruct_complete_runs(
+            raw_rows,
+            shape_rows,
+            stop_rows,
+            complete_run_ids(args.collection_summary),
+        )
+    else:
+        rows, summary = reconstruct(raw_rows, shape_rows, args.run_id, stop_rows)
     output_csv = args.output_csv or args.raw_positions.with_name(
-        args.raw_positions.name.replace("_raw_positions.csv", "_speed_profile.csv")
+        args.raw_positions.name.replace(
+            "_raw_positions.csv",
+            "_speed_profiles.csv" if args.all_complete else "_speed_profile.csv",
+        )
     )
     output_summary = args.output_summary or output_csv.with_name(
         output_csv.name.replace(".csv", "_summary.json")
     )
-    if args.require_complete and not summary["complete"]:
+    is_complete = summary["all_complete"] if args.all_complete else summary["complete"]
+    if args.require_complete and not is_complete:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         raise SystemExit("Selected run is incomplete; retaining raw data without exporting a misleading curve")
     write_outputs(rows, summary, output_csv, output_summary)
