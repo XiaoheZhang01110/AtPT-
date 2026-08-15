@@ -11,6 +11,11 @@ on:
         options:
           - smoke_test
           - full_capture
+  schedule:
+    # One-time campaign: 2026-08-17 06:30 Europe/Helsinki (03:30 UTC).
+    # The schedule gate below prevents annual repetition because cron has no year field.
+    - cron: "30 3 17 8 *"
+
 permissions:
   contents: read
 
@@ -19,12 +24,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  schedule_gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Allow only the 2026-08-17 scheduled campaign
+        id: check
+        env:
+          TZ: Europe/Helsinki
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" != "schedule" || "$(date +%Y%m%d)" == "20260817" ]]; then
+            echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+          fi
+
   capture:
+    needs: schedule_gate
+    if: ${{ needs.schedule_gate.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 270
     env:
       TZ: Europe/Helsinki
-      CAPTURE_MODE: ${{ inputs.capture_mode || 'smoke_test' }}
+      CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
       STATIC_EXTRACTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/prepare_hsl20_static.py
       COLLECTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/collect_hsl20_realtime.py
       RECONSTRUCTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_hsl20_speed.py
