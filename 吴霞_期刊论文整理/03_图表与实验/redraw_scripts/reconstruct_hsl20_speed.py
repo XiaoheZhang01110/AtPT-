@@ -221,7 +221,11 @@ def write_outputs(rows: list[dict], summary: dict, output_csv: Path, output_summ
 
 def complete_run_ids(summary_path: Path) -> list[str]:
     payload = json.loads(summary_path.read_text(encoding="utf-8"))
-    run_ids = payload.get("complete_run_ids") or []
+    run_ids = (
+        payload.get("selected_consecutive_run_ids")
+        or payload.get("complete_run_ids")
+        or []
+    )
     if not run_ids and payload.get("complete_run_id"):
         run_ids = [payload["complete_run_id"]]
     run_ids = list(dict.fromkeys(str(run_id) for run_id in run_ids if run_id))
