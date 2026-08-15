@@ -4,17 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       capture_mode:
-        description: Choose a connectivity test or three complete Eira-to-Munkkivuori runs
+        description: Choose a connectivity test or ten consecutive complete runs on one weekday
         required: true
         type: choice
         default: smoke_test
         options:
           - smoke_test
           - full_capture
-  schedule:
-    # 04:30 UTC is 06:30 in Finnish winter time and 07:30 in summer time.
-    - cron: "30 4 * * 1-5"
-
 permissions:
   contents: read
 
@@ -25,10 +21,10 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 270
     env:
       TZ: Europe/Helsinki
-      CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
+      CAPTURE_MODE: ${{ inputs.capture_mode || 'smoke_test' }}
       STATIC_EXTRACTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/prepare_hsl20_static.py
       COLLECTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/collect_hsl20_realtime.py
       RECONSTRUCTOR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts/reconstruct_hsl20_speed.py
@@ -64,15 +60,17 @@ jobs:
         if: ${{ env.CAPTURE_MODE == 'smoke_test' }}
         run: python "${COLLECTOR}" --once --timeout 20 --output-dir "${DATA_DIR}"
 
-      - name: Capture three complete Eira-to-Munkkivuori runs
+      - name: Capture ten consecutive complete Eira-to-Munkkivuori runs
         if: ${{ env.CAPTURE_MODE == 'full_capture' }}
         continue-on-error: true
         run: |
           python "${COLLECTOR}" \
             --interval 5 \
-            --duration-minutes 120 \
+            --duration-minutes 240 \
             --timeout 20 \
-            --target-complete-runs 3 \
+            --target-complete-runs 10 \
+            --timetable "${DATA_DIR}/hsl20_eira_to_munkkivuori_$(date +%Y%m%d)_timetable.csv" \
+            --require-consecutive \
             --output-dir "${DATA_DIR}"
 
       - name: Reconstruct all complete single-direction speed profiles
@@ -81,7 +79,7 @@ jobs:
         run: |
           service_day="$(date +%Y%m%d)"
           prefix="${DATA_DIR}/hsl20_eira_to_munkkivuori_${service_day}"
-          complete_count="$(python -c 'import json,sys; d=json.load(open(sys.argv[1])); print(len(d.get("complete_run_ids") or ([d["complete_run_id"]] if d.get("complete_run_id") else [])))' "${prefix}_collection_summary.json")"
+          complete_count="$(python -c 'import json,sys; d=json.load(open(sys.argv[1])); print(len(d.get("selected_consecutive_run_ids") or []))' "${prefix}_collection_summary.json")"
           if [[ "${complete_count}" -gt 0 ]]; then
             python "${RECONSTRUCTOR}" \
               "${prefix}_raw_positions.csv" \
@@ -127,6 +125,7 @@ jobs:
             ${{ env.DATA_DIR }}/hsl20_*_collection_log.jsonl
             ${{ env.DATA_DIR }}/hsl20_*_collection_summary.json
             ${{ env.DATA_DIR }}/hsl20_*_collection_summary.md
+            ${{ env.DATA_DIR }}/hsl20_*_headways.csv
             ${{ env.DATA_DIR }}/hsl20_*_speed_profile.csv
             ${{ env.DATA_DIR }}/hsl20_*_speed_profile_summary.json
             ${{ env.DATA_DIR }}/hsl20_*_speed_profiles.csv
@@ -138,10 +137,10 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Verify the three-run capture target
+      - name: Verify the ten-consecutive-run capture target
         if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
         shell: bash
         run: |
           service_day="$(date +%Y%m%d)"
           summary="${DATA_DIR}/hsl20_eira_to_munkkivuori_${service_day}_collection_summary.json"
-          python -c 'import json,sys; d=json.load(open(sys.argv[1])); n=len(d.get("complete_run_ids") or ([d["complete_run_id"]] if d.get("complete_run_id") else [])); print(f"complete_runs={n}/3"); raise SystemExit(0 if n >= 3 else 2)' "${summary}"
+          python -c 'import json,sys; d=json.load(open(sys.argv[1])); n=len(d.get("selected_consecutive_run_ids") or []); print(f"consecutive_complete_runs={n}/10"); raise SystemExit(0 if d.get("target_reached") and n == 10 else 2)' "${summary}"

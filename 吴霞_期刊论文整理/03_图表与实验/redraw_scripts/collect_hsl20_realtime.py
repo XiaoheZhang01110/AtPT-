@@ -9,7 +9,7 @@ import json
 import math
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -53,6 +53,26 @@ CSV_FIELDS = [
     "current_status",
 ]
 
+HEADWAY_FIELDS = [
+    "sequence",
+    "run_id",
+    "vehicle_id",
+    "start_date",
+    "scheduled_trip_id",
+    "scheduled_departure_eira",
+    "scheduled_arrival_munkkivuori",
+    "scheduled_headway_s",
+    "scheduled_headway_min",
+    "observed_origin_first_seen_helsinki",
+    "observed_origin_departure_helsinki",
+    "observed_destination_arrival_helsinki",
+    "observed_headway_s",
+    "observed_headway_min",
+    "departure_delay_s",
+    "travel_time_s",
+    "sample_count",
+]
+
 STATUS_NAMES = {
     0: "INCOMING_AT",
     1: "STOPPED_AT",
@@ -75,6 +95,16 @@ def parse_args() -> argparse.Namespace:
         help="Stop after this many complete single-direction runs have been observed.",
     )
     parser.add_argument(
+        "--timetable",
+        type=Path,
+        help="Current service-day timetable used to verify consecutive departures.",
+    )
+    parser.add_argument(
+        "--require-consecutive",
+        action="store_true",
+        help="Stop only after the target is a gap-free block in the GTFS timetable.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=root / "03_图表与实验" / "source_data" / "hsl20_realtime",
@@ -86,6 +116,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--interval must be at least 2 seconds")
     if args.duration_minutes <= 0 or args.timeout <= 0 or args.target_complete_runs <= 0:
         parser.error("duration, timeout, and target-complete-runs must be positive")
+    if args.require_consecutive and not args.timetable:
+        parser.error("--timetable is required with --require-consecutive")
     return args
 
 
@@ -185,6 +217,115 @@ def append_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows({name: row.get(name, "") for name in CSV_FIELDS} for row in rows)
 
 
+def read_timetable(path: Path) -> list[dict[str, str]]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    return sorted(
+        rows,
+        key=lambda row: (
+            row["service_date"],
+            normalize_gtfs_time(row["departure_eira"]),
+        ),
+    )
+
+
+def normalize_gtfs_time(value: str) -> str:
+    hour, minute, second = (int(part) for part in value.split(":"))
+    return f"{hour:02d}:{minute:02d}:{second:02d}"
+
+
+def service_datetime(service_date: str, gtfs_time: str) -> datetime:
+    hour, minute, second = (int(part) for part in gtfs_time.split(":"))
+    midnight = datetime.strptime(service_date, "%Y%m%d").replace(tzinfo=TIMEZONE)
+    return midnight + timedelta(hours=hour, minutes=minute, seconds=second)
+
+
+def select_consecutive_complete_runs(
+    complete_runs: set[str],
+    coverage: dict,
+    timetable: list[dict[str, str]],
+    target: int,
+) -> list[str]:
+    completed_by_departure = {
+        (state["start_date"], normalize_gtfs_time(state["start_time"])): run
+        for run, state in coverage.items()
+        if run in complete_runs and state.get("start_date") and state.get("start_time")
+    }
+    if len(completed_by_departure) < target:
+        return []
+    for start in range(len(timetable) - target + 1):
+        window = timetable[start : start + target]
+        run_ids = [
+            completed_by_departure.get(
+                (row["service_date"], normalize_gtfs_time(row["departure_eira"]))
+            )
+            for row in window
+        ]
+        if all(run_ids):
+            return [str(run_id) for run_id in run_ids]
+    return []
+
+
+def build_headway_rows(
+    selected_runs: list[str],
+    coverage: dict,
+    timetable: list[dict[str, str]],
+) -> list[dict]:
+    schedule_by_departure = {
+        (row["service_date"], normalize_gtfs_time(row["departure_eira"])): row
+        for row in timetable
+    }
+    rows = []
+    previous_scheduled = None
+    previous_observed = None
+    for sequence, run in enumerate(selected_runs, start=1):
+        state = coverage[run]
+        schedule = schedule_by_departure[
+            (state["start_date"], normalize_gtfs_time(state["start_time"]))
+        ]
+        scheduled = service_datetime(schedule["service_date"], schedule["departure_eira"])
+        observed = datetime.fromtimestamp(state["origin_departure_epoch"], TIMEZONE)
+        origin_seen = datetime.fromtimestamp(state["origin_seen_epoch"], TIMEZONE)
+        destination = datetime.fromtimestamp(state["destination_seen_epoch"], TIMEZONE)
+        scheduled_headway = (
+            (scheduled - previous_scheduled).total_seconds() if previous_scheduled else ""
+        )
+        observed_headway = (
+            (observed - previous_observed).total_seconds() if previous_observed else ""
+        )
+        rows.append(
+            {
+                "sequence": sequence,
+                "run_id": run,
+                "vehicle_id": state["vehicle_id"],
+                "start_date": state["start_date"],
+                "scheduled_trip_id": schedule["trip_id"],
+                "scheduled_departure_eira": schedule["departure_eira"],
+                "scheduled_arrival_munkkivuori": schedule["arrival_munkkivuori"],
+                "scheduled_headway_s": scheduled_headway,
+                "scheduled_headway_min": scheduled_headway / 60 if scheduled_headway != "" else "",
+                "observed_origin_first_seen_helsinki": origin_seen.isoformat(),
+                "observed_origin_departure_helsinki": observed.isoformat(),
+                "observed_destination_arrival_helsinki": destination.isoformat(),
+                "observed_headway_s": observed_headway,
+                "observed_headway_min": observed_headway / 60 if observed_headway != "" else "",
+                "departure_delay_s": (observed - scheduled).total_seconds(),
+                "travel_time_s": (destination - observed).total_seconds(),
+                "sample_count": state["sample_count"],
+            }
+        )
+        previous_scheduled = scheduled
+        previous_observed = observed
+    return rows
+
+
+def write_headways(path: Path, rows: list[dict]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=HEADWAY_FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def load_existing_positions(path: Path) -> tuple[set[tuple[str, str]], dict, set[str], int]:
     seen_samples: set[tuple[str, str]] = set()
     coverage: dict = {}
@@ -218,6 +359,8 @@ def update_coverage(coverage: dict, row: dict) -> bool:
             "sample_count": 0,
             "stops_observed": set(),
             "origin_seen_epoch": None,
+            "origin_last_seen_epoch": None,
+            "origin_departure_epoch": None,
             "destination_seen_epoch": None,
             "destination_stop_id_seen": False,
             "minimum_origin_distance_m": float("inf"),
@@ -241,6 +384,10 @@ def update_coverage(coverage: dict, row: dict) -> bool:
     at_origin = row["stop_id"] == ORIGIN["stop_id"] or origin_distance <= ORIGIN_RADIUS_M
     if at_origin and state["origin_seen_epoch"] is None:
         state["origin_seen_epoch"] = timestamp
+    if at_origin:
+        state["origin_last_seen_epoch"] = timestamp
+    elif state["origin_last_seen_epoch"] is not None and state["origin_departure_epoch"] is None:
+        state["origin_departure_epoch"] = timestamp
 
     elapsed = timestamp - state["origin_seen_epoch"] if state["origin_seen_epoch"] else 0
     if row["stop_id"] == DESTINATION["stop_id"]:
@@ -259,6 +406,7 @@ def update_coverage(coverage: dict, row: dict) -> bool:
 
     return bool(
         state["origin_seen_epoch"]
+        and state["origin_departure_epoch"]
         and state["destination_seen_epoch"]
         and state["sample_count"] >= MIN_COMPLETE_SAMPLES
     )
@@ -285,7 +433,9 @@ def write_summary(
     existing_sample_count: int,
     new_sample_count: int,
     complete_runs: set[str],
+    selected_consecutive_runs: list[str],
     target_complete_runs: int,
+    require_consecutive: bool,
     coverage: dict,
 ) -> None:
     first_observed = min(
@@ -301,6 +451,11 @@ def write_summary(
             coverage.get(run, {}).get("start_time", ""),
             run,
         ),
+    )
+    target_reached = (
+        len(selected_consecutive_runs) >= target_complete_runs
+        if require_consecutive
+        else len(ordered_complete_runs) >= target_complete_runs
     )
     summary = {
         "source": FEED_URL,
@@ -320,7 +475,10 @@ def write_summary(
         "complete_run_id": ordered_complete_runs[0] if ordered_complete_runs else None,
         "complete_run_ids": ordered_complete_runs,
         "complete_run_count": len(ordered_complete_runs),
-        "target_reached": len(ordered_complete_runs) >= target_complete_runs,
+        "require_consecutive": require_consecutive,
+        "selected_consecutive_run_ids": selected_consecutive_runs,
+        "selected_consecutive_run_count": len(selected_consecutive_runs),
+        "target_reached": target_reached,
         "complete": bool(ordered_complete_runs),
         "runs": serializable_coverage(coverage),
         "speed_note": (
@@ -338,6 +496,14 @@ def write_summary(
         f"- New position samples: {new_sample_count}",
         f"- Observed runs: {len(coverage)}",
         f"- Complete runs: {len(ordered_complete_runs)} / {target_complete_runs}",
+        f"- Consecutive target required: {'yes' if require_consecutive else 'no'}",
+        f"- Consecutive runs selected: {len(selected_consecutive_runs)} / {target_complete_runs}",
+        (
+            "- Selected run IDs: "
+            + ", ".join(f"`{run}`" for run in selected_consecutive_runs)
+            if selected_consecutive_runs
+            else "- Selected run IDs: not yet available"
+        ),
         (
             "- Complete run IDs: " + ", ".join(f"`{run}`" for run in ordered_complete_runs)
             if ordered_complete_runs
@@ -360,24 +526,57 @@ def self_test() -> None:
     coverage: dict = {}
     completed: set[str] = set()
     base = 1_786_700_000
-    for index in range(3):
+    timetable = []
+    for index in range(11):
+        departure = f"08:{index * 10:02d}:00" if index < 6 else f"09:{(index - 6) * 10:02d}:00"
+        timetable.append(
+            {
+                "service_date": "20260814",
+                "trip_id": f"scheduled-{index + 1}",
+                "departure_eira": departure,
+                "arrival_munkkivuori": "09:00:00",
+            }
+        )
+
+    def complete_test_run(index: int) -> None:
         run = f"test-{index + 1}"
+        departure = timetable[index]["departure_eira"]
+        departure_epoch = base + index * 600
         origin_row = {
             "run_id": run, "vehicle_id": f"22/{index + 1}", "start_date": "20260814",
-            "start_time": f"08:{index * 10:02d}:00", "vehicle_timestamp_utc": utc_iso(base),
+            "start_time": departure, "vehicle_timestamp_utc": utc_iso(departure_epoch - 30),
             "latitude": ORIGIN["lat"], "longitude": ORIGIN["lon"], "stop_id": ORIGIN["stop_id"],
         }
         assert not update_coverage(coverage, origin_row)
+        departed_row = dict(origin_row)
+        departed_row.update(
+            {
+                "vehicle_timestamp_utc": utc_iso(departure_epoch),
+                "latitude": 60.158,
+                "longitude": 24.940,
+                "stop_id": "",
+            }
+        )
+        assert not update_coverage(coverage, departed_row)
         coverage[run]["sample_count"] = MIN_COMPLETE_SAMPLES
         destination_row = dict(origin_row)
         destination_row.update(
-            {"vehicle_timestamp_utc": utc_iso(base + MIN_COMPLETE_DURATION_S),
+            {"vehicle_timestamp_utc": utc_iso(departure_epoch + MIN_COMPLETE_DURATION_S),
              "latitude": DESTINATION["lat"], "longitude": DESTINATION["lon"],
              "stop_id": DESTINATION["stop_id"]}
         )
         if update_coverage(coverage, destination_row):
             completed.add(run)
-    assert len(completed) == 3
+
+    for index in [*range(9), 10]:
+        complete_test_run(index)
+    assert not select_consecutive_complete_runs(completed, coverage, timetable, 10)
+    complete_test_run(9)
+    selected = select_consecutive_complete_runs(completed, coverage, timetable, 10)
+    assert selected == [f"test-{index}" for index in range(1, 11)]
+    headways = build_headway_rows(selected, coverage, timetable)
+    assert len(headways) == 10
+    assert all(row["observed_headway_s"] == 600 for row in headways[1:])
     print("HSL 20 realtime collector self-test passed.")
 
 
@@ -397,9 +596,18 @@ def main() -> int:
     protobuf_path = args.output_dir / f"{prefix}_first_feed.pb"
     summary_json = args.output_dir / f"{prefix}_collection_summary.json"
     summary_md = args.output_dir / f"{prefix}_collection_summary.md"
+    headways_path = args.output_dir / f"{prefix}_headways.csv"
+    timetable = read_timetable(args.timetable) if args.timetable else []
 
     seen_samples, coverage, complete_runs, existing_sample_count = load_existing_positions(
         positions_path
+    )
+    selected_consecutive_runs = (
+        select_consecutive_complete_runs(
+            complete_runs, coverage, timetable, args.target_complete_runs
+        )
+        if args.require_consecutive
+        else []
     )
     existing_request_count, existing_successful_requests = count_existing_requests(log_path)
     request_count = 0
@@ -430,6 +638,10 @@ def main() -> int:
                     fresh_rows.append(row)
                     if update_coverage(coverage, row):
                         complete_runs.add(row["run_id"])
+                if args.require_consecutive:
+                    selected_consecutive_runs = select_consecutive_complete_runs(
+                        complete_runs, coverage, timetable, args.target_complete_runs
+                    )
                 append_csv(positions_path, fresh_rows)
                 new_sample_count += len(fresh_rows)
                 append_json_line(
@@ -452,12 +664,17 @@ def main() -> int:
                         "new_samples": len(fresh_rows),
                         "complete_run_ids": sorted(complete_runs),
                         "complete_run_count": len(complete_runs),
+                        "selected_consecutive_run_ids": selected_consecutive_runs,
+                        "consecutive_target_reached": (
+                            len(selected_consecutive_runs) >= args.target_complete_runs
+                        ),
                     },
                 )
                 print(
                     f"{received_at.isoformat()} request={request_count} "
                     f"vehicles={len(rows)} new_samples={len(fresh_rows)} "
-                    f"complete_runs={len(complete_runs)}/{args.target_complete_runs}",
+                    f"complete_runs={len(complete_runs)} "
+                    f"consecutive_runs={len(selected_consecutive_runs)}/{args.target_complete_runs}",
                     flush=True,
                 )
             except Exception as error:  # retain an auditable log and tolerate brief outages
@@ -476,11 +693,12 @@ def main() -> int:
                 if args.once or consecutive_errors >= 10:
                     break
 
-            if (
-                args.once
-                or len(complete_runs) >= args.target_complete_runs
-                or time.monotonic() >= deadline
-            ):
+            target_reached = (
+                len(selected_consecutive_runs) >= args.target_complete_runs
+                if args.require_consecutive
+                else len(complete_runs) >= args.target_complete_runs
+            )
+            if args.once or target_reached or time.monotonic() >= deadline:
                 break
             elapsed = time.monotonic() - request_started
             time.sleep(max(0.0, args.interval - elapsed))
@@ -494,15 +712,27 @@ def main() -> int:
             existing_sample_count=existing_sample_count,
             new_sample_count=new_sample_count,
             complete_runs=complete_runs,
+            selected_consecutive_runs=selected_consecutive_runs,
             target_complete_runs=args.target_complete_runs,
+            require_consecutive=args.require_consecutive,
             coverage=coverage,
         )
+        if selected_consecutive_runs:
+            write_headways(
+                headways_path,
+                build_headway_rows(selected_consecutive_runs, coverage, timetable),
+            )
 
     if successful_requests == 0:
         return 3
     if args.once:
         return 0
-    return 0 if len(complete_runs) >= args.target_complete_runs else 2
+    target_reached = (
+        len(selected_consecutive_runs) >= args.target_complete_runs
+        if args.require_consecutive
+        else len(complete_runs) >= args.target_complete_runs
+    )
+    return 0 if target_reached else 2
 
 
 if __name__ == "__main__":

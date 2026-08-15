@@ -66,6 +66,7 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 - `_raw_positions.csv`：标准化实时位置数据；
 - `_collection_log.jsonl`：逐次请求日志；
 - `_collection_summary.json/.md`：完整性和覆盖范围摘要；
+- `_headways.csv`：连续10班的计划/实测发车时间、到达时间、发车延误和相邻车头时距；
 - `_speed_profile.csv`：完整单程的地图匹配与速度重建结果；
 - `_speed_profile_summary.json`：速度曲线质量摘要。
 - `_elevation.csv`：257个GTFS线形点对应的公开DEM高程；
@@ -81,9 +82,12 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 采集器同时记录方向0的全部车辆，但只有同一`车辆编号 + 运营日期 + 计划发车时间`满足以下条件才判为完整单程：
 
 1. 在Eira首站或其100 m范围内被观测；
-2. 此后明确观测到Munkkivuori末站ID，并继续跟踪至车辆进入末站75 m范围；
-3. 两端观测相隔至少15分钟；
-4. 至少获得60个不同时间戳样本。
+2. 此后观测到车辆驶出Eira起点范围，以离开时刻作为实测发车时刻；
+3. 明确观测到Munkkivuori末站ID，并继续跟踪至车辆进入末站75 m范围；
+4. 两端观测相隔至少15分钟；
+5. 至少获得60个不同时间戳样本。
+
+论文正式样本进一步要求10条完整单程在当日GTFS时刻表中对应连续发车班次。若中间某个计划班次未形成完整轨迹，采集器不会把其前后的运行拼接为“连续10班”，而会继续等待下一段无缺口的10班。
 
 未达到完整性要求时保留原始证据，但重建器默认拒绝输出“完整速度曲线”，避免把中途截取的车辆轨迹误当成完整单程。
 
@@ -101,9 +105,10 @@ A148继续保留为前期探索案例；HSL 20路用于采集更具常规城市�
 工作流为`.github/workflows/hsl20-single-direction-capture.yml`，显示名称为`HSL 20 single-direction speed capture`。
 
 - 手动运行默认选择`smoke_test`，只请求一次；
-- 选择`full_capture`后，最多连续采集120分钟，目标是获得3条完整单程；
-- 采集器保留同一时段的全部方向0车辆，达到3条完整运行后提前结束；
-- 重建器同时输出`_speed_profiles.csv`和`_speed_profiles_summary.json`，每条记录包含`profile_index`和`run_id`；
-- 工作日自动任务在UTC 04:30启动，即芬兰冬季06:30、夏季07:30；
+- 选择`full_capture`后，最多连续采集240分钟，目标是获得同一工作日连续10条有效完整单程；
+- “连续”依据采集日GTFS时刻表核验，不能用任意10条完整轨迹替代；
+- 达到连续10班后，重建器输出`_speed_profiles.csv`和`_speed_profiles_summary.json`，每条记录包含`profile_index`和`run_id`；
+- `_headways.csv`提供10个发车时刻和9个相邻实测车头时距；
+- 为避免在多个工作日重复采集，工作流不再设置周期性任务，应在选定工作日手动运行一次`full_capture`；
 - 完成后在该次Actions运行页面的`Artifacts`区域下载`hsl20-single-direction-data-*`；
 - 不需要创建任何GitHub Secret。
