@@ -1,0 +1,11 @@
+{
+  "prepared_at_utc": "2026-08-17T14:39:04.456694+00:00",
+  "prefix": "uta50x_wvc_to_murray_20260817",
+  "elevation_source": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples",
+  "elevation_sample_count": 426,
+  "signal_inventory_source": "https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query",
+  "signal_bbox_feature_count": 27,
+  "matched_signal_count": 8,
+  "signal_corridor_m": 100.0,
+  "signal_note": "Official UDOT inventory points map-matched to the official UTA GTFS shape."
+}

@@ -1,0 +1,9 @@
+﻿signal_index,udot_signal_id,street_east_west,street_north_south,city,signal_type,latitude,longitude,route_distance_km,route_offset_m,inventory_source
+1,4510,4100 S,2700 W,West Valley City/Taylorsville,Signal,40.6821908,-111.9579930,1.512964,1.09,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+2,7646,Motor Vehicle Test Course (SR-299) ~4570 S,Motor Vehicle Test Course (SR-299) ~2760 W,West Valley City,Signal,40.6706331,-111.9591417,2.798140,99.77,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+3,4030,4700 S,2700 W,Taylorsville/West Valley City,Signal,40.6675921,-111.9579639,3.137625,0.92,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+4,7107,4700 S (SR-266),Redwood Rd (SR-68),Taylorsville,Signal,40.6676460,-111.9388795,4.747304,0.44,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+5,7605,4610 S (Conifer Wy)/SLCC (SR-292),Redwood Rd (SR-68),Taylorsville,Signal,40.6699393,-111.9387941,4.995425,14.66,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+6,7312,4500 S (SR-266),Atherton Dr W (~1050 W),Taylorsville,Signal,40.6721141,-111.9225590,7.319259,15.91,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+7,4603,4800 S,Murray Blvd (500 W),Murray,Signal,40.6672788,-111.9063833,9.405642,0.34,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query
+8,4731,Vine St (5100 S),Cottonwood St (70 W),Murray,Signal,40.6619802,-111.8932836,11.125262,0.30,https://maps.udot.utah.gov/central/rest/services/TrafficAndSafety/AT_Intersection_Safety_Data/MapServer/1/query

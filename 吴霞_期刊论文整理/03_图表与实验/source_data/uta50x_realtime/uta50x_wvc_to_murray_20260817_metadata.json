@@ -1,0 +1,28 @@
+{
+  "prepared_at_utc": "2026-08-17T14:35:14Z",
+  "source": "https://gtfsfeed.rideuta.com/GTFS.zip",
+  "service_date": "20260817",
+  "timezone": "America/Denver",
+  "route_id": "87711",
+  "route_short_name": "50X",
+  "route_long_name": "MID-VALLEY CONNECTOR BRT (MVX)",
+  "direction_id": "1",
+  "origin": {
+    "stop_id": "18886",
+    "name": "West Valley Central Station (Bay J)"
+  },
+  "destination": {
+    "stop_id": "14216",
+    "name": "Murray Central Station (Bay A)"
+  },
+  "stop_count": 16,
+  "shape_id": "256022",
+  "shape_point_count": 348,
+  "route_length_km": 12.069847086866721,
+  "scheduled_trip_count": 69,
+  "target_trip_count": 10,
+  "target_first_departure": " 6:31:00",
+  "target_last_departure": " 8:46:00",
+  "target_last_arrival": " 9:25:00",
+  "files_prefix": "uta50x_wvc_to_murray_20260817"
+}

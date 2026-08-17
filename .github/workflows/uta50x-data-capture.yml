@@ -1,0 +1,200 @@
+name: UTA 50X optimization dataset capture
+
+on:
+  workflow_dispatch:
+    inputs:
+      capture_mode:
+        description: Validate sources or collect ten consecutive complete weekday trips
+        required: true
+        type: choice
+        default: smoke_test
+        options:
+          - smoke_test
+          - full_capture
+      service_date:
+        description: Optional Utah service date (YYYYMMDD); leave blank for today
+        required: false
+        type: string
+  schedule:
+    # One-time campaign: 2026-08-18 at 06:20 America/Denver. Both UTC offsets are
+    # listed for DST safety; the local-time/year gate admits exactly one run.
+    - cron: "20 12,13 18 8 *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uta50x-ten-consecutive-weekday-trips
+  cancel-in-progress: false
+
+jobs:
+  time_gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      service_date: ${{ steps.check.outputs.service_date }}
+    steps:
+      - name: Select the Utah service day and suppress the duplicate DST cron
+        id: check
+        env:
+          TZ: America/Denver
+          REQUESTED_DATE: ${{ inputs.service_date }}
+        shell: bash
+        run: |
+          service_date="${REQUESTED_DATE:-$(date +%Y%m%d)}"
+          echo "service_date=${service_date}" >> "${GITHUB_OUTPUT}"
+          if [[ "${GITHUB_EVENT_NAME}" != "schedule" ]]; then
+            echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          elif [[ "$(date +%Y%m%d-%H%M)" == "20260818-0620" ]]; then
+            echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  capture:
+    needs: time_gate
+    if: ${{ needs.time_gate.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      TZ: America/Denver
+      CAPTURE_MODE: ${{ github.event_name == 'schedule' && 'full_capture' || inputs.capture_mode || 'smoke_test' }}
+      SERVICE_DATE: ${{ needs.time_gate.outputs.service_date }}
+      SCRIPT_DIR: 吴霞_期刊论文整理/03_图表与实验/redraw_scripts
+      DATA_DIR: 吴霞_期刊论文整理/03_图表与实验/source_data/uta50x_realtime
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ${{ env.SCRIPT_DIR }}/requirements_uta50x.txt
+
+      - name: Install GTFS-Realtime and chart parsers
+        run: python -m pip install --disable-pip-version-check -r "${SCRIPT_DIR}/requirements_uta50x.txt"
+
+      - name: Run offline self-tests
+        run: |
+          python "${SCRIPT_DIR}/prepare_uta50x_static.py" --self-test
+          python "${SCRIPT_DIR}/prepare_uta50x_context.py" --self-test
+          python "${SCRIPT_DIR}/collect_uta50x_realtime.py" --self-test
+          python "${SCRIPT_DIR}/reconstruct_uta50x_dataset.py" --self-test
+          python "${SCRIPT_DIR}/collect_uta50x_signal_timing.py" --self-test
+          python "${SCRIPT_DIR}/finalize_uta50x_signal_inputs.py" --self-test
+
+      - name: Download official route, stops, shape, and weekday timetables
+        run: |
+          python "${SCRIPT_DIR}/prepare_uta50x_static.py" \
+            --service-date "${SERVICE_DATE}" \
+            --first-departure 06:30:00 \
+            --trip-count 10 \
+            --output-dir "${DATA_DIR}"
+
+      - name: Download 426 USGS elevations and official UDOT signal positions
+        run: python "${SCRIPT_DIR}/prepare_uta50x_context.py" --data-dir "${DATA_DIR}"
+
+      - name: Test official UTA real-time feeds
+        if: ${{ env.CAPTURE_MODE == 'smoke_test' }}
+        run: python "${SCRIPT_DIR}/collect_uta50x_realtime.py" --data-dir "${DATA_DIR}" --once --timeout 30
+
+      - name: Test one official UDOT ATSPM phase chart
+        if: ${{ env.CAPTURE_MODE == 'smoke_test' }}
+        continue-on-error: true
+        run: |
+          python "${SCRIPT_DIR}/collect_uta50x_signal_timing.py" \
+            --data-dir "${DATA_DIR}" \
+            --max-signals 1 \
+            --phases 2
+
+      - name: Capture ten consecutive complete West Valley-to-Murray trips
+        if: ${{ env.CAPTURE_MODE == 'full_capture' }}
+        continue-on-error: true
+        run: |
+          python "${SCRIPT_DIR}/collect_uta50x_realtime.py" \
+            --data-dir "${DATA_DIR}" \
+            --interval-seconds 5 \
+            --duration-minutes 240 \
+            --target-trips 10 \
+            --timeout 30
+
+      - name: Download official observed signal phase windows
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
+        continue-on-error: true
+        run: |
+          python "${SCRIPT_DIR}/collect_uta50x_signal_timing.py" \
+            --data-dir "${DATA_DIR}" \
+            --phases 1-8
+
+      - name: Reconstruct trajectories, speed curves, stop dwells, and headways
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          if compgen -G "${DATA_DIR}/uta50x_*_raw_vehicle_positions.csv" > /dev/null; then
+            python "${SCRIPT_DIR}/reconstruct_uta50x_dataset.py" --data-dir "${DATA_DIR}"
+          else
+            echo "No vehicle-position file was generated; reconstruction skipped."
+          fi
+
+      - name: Select route-serving phases and assemble optimization signal plans
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          if compgen -G "${DATA_DIR}/uta50x_*_signal_passage_times.csv" > /dev/null && \
+             compgen -G "${DATA_DIR}/uta50x_*_official_green_windows_all_phases.csv" > /dev/null; then
+            python "${SCRIPT_DIR}/finalize_uta50x_signal_inputs.py" --data-dir "${DATA_DIR}"
+          else
+            echo "Passage times or official green windows are unavailable; phase matching skipped."
+          fi
+
+      - name: Publish a concise quality summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## UTA 50X optimization dataset" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Service date: ${SERVICE_DATE} (America/Denver)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Mode: ${CAPTURE_MODE}" >> "${GITHUB_STEP_SUMMARY}"
+          for summary in "${DATA_DIR}"/uta50x_*_summary.json "${DATA_DIR}"/uta50x_*_metadata.json; do
+            if [[ -f "${summary}" ]]; then
+              echo "- $(basename "${summary}")" >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          done
+
+      - name: Upload all source evidence and model-ready inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uta50x-optimization-data-${{ github.run_id }}
+          path: |
+            ${{ env.DATA_DIR }}/uta50x_*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Verify the full dataset target
+        if: ${{ always() && env.CAPTURE_MODE == 'full_capture' }}
+        shell: bash
+        run: |
+          python - "${DATA_DIR}" <<'PY'
+          import csv, glob, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          def one(pattern):
+              files = sorted(root.glob(pattern))
+              if not files:
+                  raise SystemExit(f"missing required output: {pattern}")
+              return files[-1]
+          reconstruction = json.loads(one("uta50x_*_reconstruction_summary.json").read_text())
+          timing = json.loads(one("uta50x_*_signal_timing_summary.json").read_text())
+          context = json.loads(one("uta50x_*_context_metadata.json").read_text())
+          if reconstruction["complete_trip_count"] != 10 or reconstruction["headway_count"] != 9:
+              raise SystemExit("ten complete trips / nine headways target not reached")
+          if context["elevation_sample_count"] != 426 or context["matched_signal_count"] < 1:
+              raise SystemExit("elevation or signal-position target not reached")
+          if timing["signals_with_phase_events"] < 1:
+              raise SystemExit("official ATSPM charts contained no usable phase events")
+          print("Verified: 10 trips, 9 headways, 426 elevations, official signals, and ATSPM timing.")
+          PY
