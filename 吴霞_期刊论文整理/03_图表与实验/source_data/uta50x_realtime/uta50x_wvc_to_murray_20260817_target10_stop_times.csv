@@ -1,0 +1,161 @@
+﻿target_run_index,trip_id,stop_sequence,stop_id,stop_name,scheduled_arrival_time,scheduled_departure_time
+1,5914112,1,18886,West Valley Central Station (Bay J), 6:31:00, 6:31:00
+1,5914112,2,16069,3800 South Station, 6:33:00, 6:33:00
+1,5914112,3,16072,4100 South Station, 6:35:00, 6:35:00
+1,5914112,4,16074,4500 South Station, 6:37:00, 6:37:00
+1,5914112,5,15999,4700 South 2700 West Station, 6:38:00, 6:38:00
+1,5914112,6,21580,2200 W Station, 6:45:00, 6:45:00
+1,5914112,7,25485,SLCC Taylorsville Campus Arrival, 6:51:00, 6:51:00
+1,5914112,8,17402,SLCC Transit Center (Bay D), 6:51:00, 6:51:00
+1,5914112,9,17139,1300 West Station, 6:55:00, 6:55:00
+1,5914112,10,24352,Atherton West Station, 6:56:00, 6:56:00
+1,5914112,11,16926,Riverboat Road Station, 6:57:00, 6:57:00
+1,5914112,12,16927,Atherton East Station, 6:58:00, 6:58:00
+1,5914112,13,24163,Sunstone Road Station, 6:59:00, 6:59:00
+1,5914112,14,24219,Murray Blvd Station, 7:01:00, 7:01:00
+1,5914112,15,14546,Vine Street Station, 7:02:00, 7:02:00
+1,5914112,16,14216,Murray Central Station (Bay A), 7:10:00, 7:10:00
+2,5914113,1,18886,West Valley Central Station (Bay J), 6:46:00, 6:46:00
+2,5914113,2,16069,3800 South Station, 6:48:00, 6:48:00
+2,5914113,3,16072,4100 South Station, 6:50:00, 6:50:00
+2,5914113,4,16074,4500 South Station, 6:52:00, 6:52:00
+2,5914113,5,15999,4700 South 2700 West Station, 6:53:00, 6:53:00
+2,5914113,6,21580,2200 W Station, 7:00:00, 7:00:00
+2,5914113,7,25485,SLCC Taylorsville Campus Arrival, 7:06:00, 7:06:00
+2,5914113,8,17402,SLCC Transit Center (Bay D), 7:06:00, 7:06:00
+2,5914113,9,17139,1300 West Station, 7:10:00, 7:10:00
+2,5914113,10,24352,Atherton West Station, 7:11:00, 7:11:00
+2,5914113,11,16926,Riverboat Road Station, 7:12:00, 7:12:00
+2,5914113,12,16927,Atherton East Station, 7:13:00, 7:13:00
+2,5914113,13,24163,Sunstone Road Station, 7:14:00, 7:14:00
+2,5914113,14,24219,Murray Blvd Station, 7:16:00, 7:16:00
+2,5914113,15,14546,Vine Street Station, 7:17:00, 7:17:00
+2,5914113,16,14216,Murray Central Station (Bay A), 7:25:00, 7:25:00
+3,5914114,1,18886,West Valley Central Station (Bay J), 7:01:00, 7:01:00
+3,5914114,2,16069,3800 South Station, 7:03:00, 7:03:00
+3,5914114,3,16072,4100 South Station, 7:05:00, 7:05:00
+3,5914114,4,16074,4500 South Station, 7:07:00, 7:07:00
+3,5914114,5,15999,4700 South 2700 West Station, 7:08:00, 7:08:00
+3,5914114,6,21580,2200 W Station, 7:15:00, 7:15:00
+3,5914114,7,25485,SLCC Taylorsville Campus Arrival, 7:21:00, 7:21:00
+3,5914114,8,17402,SLCC Transit Center (Bay D), 7:21:00, 7:21:00
+3,5914114,9,17139,1300 West Station, 7:25:00, 7:25:00
+3,5914114,10,24352,Atherton West Station, 7:26:00, 7:26:00
+3,5914114,11,16926,Riverboat Road Station, 7:27:00, 7:27:00
+3,5914114,12,16927,Atherton East Station, 7:28:00, 7:28:00
+3,5914114,13,24163,Sunstone Road Station, 7:29:00, 7:29:00
+3,5914114,14,24219,Murray Blvd Station, 7:31:00, 7:31:00
+3,5914114,15,14546,Vine Street Station, 7:32:00, 7:32:00
+3,5914114,16,14216,Murray Central Station (Bay A), 7:40:00, 7:40:00
+4,5914115,1,18886,West Valley Central Station (Bay J), 7:16:00, 7:16:00
+4,5914115,2,16069,3800 South Station, 7:18:00, 7:18:00
+4,5914115,3,16072,4100 South Station, 7:20:00, 7:20:00
+4,5914115,4,16074,4500 South Station, 7:22:00, 7:22:00
+4,5914115,5,15999,4700 South 2700 West Station, 7:23:00, 7:23:00
+4,5914115,6,21580,2200 W Station, 7:30:00, 7:30:00
+4,5914115,7,25485,SLCC Taylorsville Campus Arrival, 7:36:00, 7:36:00
+4,5914115,8,17402,SLCC Transit Center (Bay D), 7:36:00, 7:36:00
+4,5914115,9,17139,1300 West Station, 7:40:00, 7:40:00
+4,5914115,10,24352,Atherton West Station, 7:41:00, 7:41:00
+4,5914115,11,16926,Riverboat Road Station, 7:42:00, 7:42:00
+4,5914115,12,16927,Atherton East Station, 7:43:00, 7:43:00
+4,5914115,13,24163,Sunstone Road Station, 7:44:00, 7:44:00
+4,5914115,14,24219,Murray Blvd Station, 7:46:00, 7:46:00
+4,5914115,15,14546,Vine Street Station, 7:47:00, 7:47:00
+4,5914115,16,14216,Murray Central Station (Bay A), 7:55:00, 7:55:00
+5,5914116,1,18886,West Valley Central Station (Bay J), 7:31:00, 7:31:00
+5,5914116,2,16069,3800 South Station, 7:33:00, 7:33:00
+5,5914116,3,16072,4100 South Station, 7:35:00, 7:35:00
+5,5914116,4,16074,4500 South Station, 7:37:00, 7:37:00
+5,5914116,5,15999,4700 South 2700 West Station, 7:38:00, 7:38:00
+5,5914116,6,21580,2200 W Station, 7:45:00, 7:45:00
+5,5914116,7,25485,SLCC Taylorsville Campus Arrival, 7:51:00, 7:51:00
+5,5914116,8,17402,SLCC Transit Center (Bay D), 7:51:00, 7:51:00
+5,5914116,9,17139,1300 West Station, 7:55:00, 7:55:00
+5,5914116,10,24352,Atherton West Station, 7:56:00, 7:56:00
+5,5914116,11,16926,Riverboat Road Station, 7:57:00, 7:57:00
+5,5914116,12,16927,Atherton East Station, 7:58:00, 7:58:00
+5,5914116,13,24163,Sunstone Road Station, 7:59:00, 7:59:00
+5,5914116,14,24219,Murray Blvd Station, 8:01:00, 8:01:00
+5,5914116,15,14546,Vine Street Station, 8:02:00, 8:02:00
+5,5914116,16,14216,Murray Central Station (Bay A), 8:10:00, 8:10:00
+6,5914117,1,18886,West Valley Central Station (Bay J), 7:46:00, 7:46:00
+6,5914117,2,16069,3800 South Station, 7:48:00, 7:48:00
+6,5914117,3,16072,4100 South Station, 7:50:00, 7:50:00
+6,5914117,4,16074,4500 South Station, 7:52:00, 7:52:00
+6,5914117,5,15999,4700 South 2700 West Station, 7:53:00, 7:53:00
+6,5914117,6,21580,2200 W Station, 8:00:00, 8:00:00
+6,5914117,7,25485,SLCC Taylorsville Campus Arrival, 8:06:00, 8:06:00
+6,5914117,8,17402,SLCC Transit Center (Bay D), 8:06:00, 8:06:00
+6,5914117,9,17139,1300 West Station, 8:10:00, 8:10:00
+6,5914117,10,24352,Atherton West Station, 8:11:00, 8:11:00
+6,5914117,11,16926,Riverboat Road Station, 8:12:00, 8:12:00
+6,5914117,12,16927,Atherton East Station, 8:13:00, 8:13:00
+6,5914117,13,24163,Sunstone Road Station, 8:14:00, 8:14:00
+6,5914117,14,24219,Murray Blvd Station, 8:16:00, 8:16:00
+6,5914117,15,14546,Vine Street Station, 8:17:00, 8:17:00
+6,5914117,16,14216,Murray Central Station (Bay A), 8:25:00, 8:25:00
+7,5914118,1,18886,West Valley Central Station (Bay J), 8:01:00, 8:01:00
+7,5914118,2,16069,3800 South Station, 8:03:00, 8:03:00
+7,5914118,3,16072,4100 South Station, 8:05:00, 8:05:00
+7,5914118,4,16074,4500 South Station, 8:07:00, 8:07:00
+7,5914118,5,15999,4700 South 2700 West Station, 8:08:00, 8:08:00
+7,5914118,6,21580,2200 W Station, 8:15:00, 8:15:00
+7,5914118,7,25485,SLCC Taylorsville Campus Arrival, 8:21:00, 8:21:00
+7,5914118,8,17402,SLCC Transit Center (Bay D), 8:21:00, 8:21:00
+7,5914118,9,17139,1300 West Station, 8:25:00, 8:25:00
+7,5914118,10,24352,Atherton West Station, 8:26:00, 8:26:00
+7,5914118,11,16926,Riverboat Road Station, 8:27:00, 8:27:00
+7,5914118,12,16927,Atherton East Station, 8:28:00, 8:28:00
+7,5914118,13,24163,Sunstone Road Station, 8:29:00, 8:29:00
+7,5914118,14,24219,Murray Blvd Station, 8:31:00, 8:31:00
+7,5914118,15,14546,Vine Street Station, 8:32:00, 8:32:00
+7,5914118,16,14216,Murray Central Station (Bay A), 8:40:00, 8:40:00
+8,5914119,1,18886,West Valley Central Station (Bay J), 8:16:00, 8:16:00
+8,5914119,2,16069,3800 South Station, 8:18:00, 8:18:00
+8,5914119,3,16072,4100 South Station, 8:20:00, 8:20:00
+8,5914119,4,16074,4500 South Station, 8:22:00, 8:22:00
+8,5914119,5,15999,4700 South 2700 West Station, 8:23:00, 8:23:00
+8,5914119,6,21580,2200 W Station, 8:30:00, 8:30:00
+8,5914119,7,25485,SLCC Taylorsville Campus Arrival, 8:36:00, 8:36:00
+8,5914119,8,17402,SLCC Transit Center (Bay D), 8:36:00, 8:36:00
+8,5914119,9,17139,1300 West Station, 8:40:00, 8:40:00
+8,5914119,10,24352,Atherton West Station, 8:41:00, 8:41:00
+8,5914119,11,16926,Riverboat Road Station, 8:42:00, 8:42:00
+8,5914119,12,16927,Atherton East Station, 8:43:00, 8:43:00
+8,5914119,13,24163,Sunstone Road Station, 8:44:00, 8:44:00
+8,5914119,14,24219,Murray Blvd Station, 8:46:00, 8:46:00
+8,5914119,15,14546,Vine Street Station, 8:47:00, 8:47:00
+8,5914119,16,14216,Murray Central Station (Bay A), 8:55:00, 8:55:00
+9,5914120,1,18886,West Valley Central Station (Bay J), 8:31:00, 8:31:00
+9,5914120,2,16069,3800 South Station, 8:33:00, 8:33:00
+9,5914120,3,16072,4100 South Station, 8:35:00, 8:35:00
+9,5914120,4,16074,4500 South Station, 8:37:00, 8:37:00
+9,5914120,5,15999,4700 South 2700 West Station, 8:38:00, 8:38:00
+9,5914120,6,21580,2200 W Station, 8:45:00, 8:45:00
+9,5914120,7,25485,SLCC Taylorsville Campus Arrival, 8:51:00, 8:51:00
+9,5914120,8,17402,SLCC Transit Center (Bay D), 8:51:00, 8:51:00
+9,5914120,9,17139,1300 West Station, 8:55:00, 8:55:00
+9,5914120,10,24352,Atherton West Station, 8:56:00, 8:56:00
+9,5914120,11,16926,Riverboat Road Station, 8:57:00, 8:57:00
+9,5914120,12,16927,Atherton East Station, 8:58:00, 8:58:00
+9,5914120,13,24163,Sunstone Road Station, 8:59:00, 8:59:00
+9,5914120,14,24219,Murray Blvd Station, 9:01:00, 9:01:00
+9,5914120,15,14546,Vine Street Station, 9:02:00, 9:02:00
+9,5914120,16,14216,Murray Central Station (Bay A), 9:10:00, 9:10:00
+10,5914121,1,18886,West Valley Central Station (Bay J), 8:46:00, 8:46:00
+10,5914121,2,16069,3800 South Station, 8:48:00, 8:48:00
+10,5914121,3,16072,4100 South Station, 8:50:00, 8:50:00
+10,5914121,4,16074,4500 South Station, 8:52:00, 8:52:00
+10,5914121,5,15999,4700 South 2700 West Station, 8:53:00, 8:53:00
+10,5914121,6,21580,2200 W Station, 9:00:00, 9:00:00
+10,5914121,7,25485,SLCC Taylorsville Campus Arrival, 9:06:00, 9:06:00
+10,5914121,8,17402,SLCC Transit Center (Bay D), 9:06:00, 9:06:00
+10,5914121,9,17139,1300 West Station, 9:10:00, 9:10:00
+10,5914121,10,24352,Atherton West Station, 9:11:00, 9:11:00
+10,5914121,11,16926,Riverboat Road Station, 9:12:00, 9:12:00
+10,5914121,12,16927,Atherton East Station, 9:13:00, 9:13:00
+10,5914121,13,24163,Sunstone Road Station, 9:14:00, 9:14:00
+10,5914121,14,24219,Murray Blvd Station, 9:16:00, 9:16:00
+10,5914121,15,14546,Vine Street Station, 9:17:00, 9:17:00
+10,5914121,16,14216,Murray Central Station (Bay A), 9:25:00, 9:25:00
